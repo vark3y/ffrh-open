@@ -58,6 +58,7 @@ def home(request: Request, con=Depends(db)):
 
 
 PAGE_SIZE = 40
+MATCH_PAGE = 25
 
 
 @app.get("/funders", response_class=HTMLResponse)
@@ -330,21 +331,36 @@ def hub_cso_pick(request: Request, persona=Depends(surface("cso")), con=Depends(
 
 
 @app.get("/hub/cso/{cso_id}", response_class=HTMLResponse)
-def hub_cso(request: Request, cso_id: str, step: int = 1, persona=Depends(require_persona), con=Depends(db)):
+def hub_cso(request: Request, cso_id: str, step: int = 1, page: int = 1, band: str | None = None,
+            persona=Depends(require_persona), con=Depends(db)):
     _log(con, request, cso_id)
     c = next((x for x in _cohort(con) if x["cso_id"] == cso_id), None)
     if not c:
         raise HTTPException(404)
-    ctx = {"c": c, "step": step}
-    if step >= 2:
+    ctx = {"c": c, "step": step, "page": page, "band": band or ""}
+    if step == 2:
         ctx["patterns"] = subareas.attractiveness(con, c["state_code"])
         ctx["patterns_all"] = subareas.attractiveness(con)
-    if step >= 3:
-        ctx["matches"] = matching.match_for_cso(con, cso_id, limit=10)
-    if step >= 4:
+        ctx["hexmap"] = hexmap.build(con, fy=fq.LATEST_FY)
+    if step == 3:
+        # The whole ranked list is available, a page at a time. Nothing is hidden behind a top-10 cut.
+        m = matching.match_for_cso(con, cso_id, limit=MATCH_PAGE, offset=(max(1, page) - 1) * MATCH_PAGE)
+        if band in ("strong", "worth", "weak"):
+            full = matching.match_for_cso(con, cso_id, limit=0, offset=0)
+            filtered = [r for r in full["matches"] if r["band"] == band]
+            m["matches"] = filtered[(max(1, page) - 1) * MATCH_PAGE:(max(1, page)) * MATCH_PAGE]
+            m["total"] = len(filtered)
+        ctx["matches"] = m
+        ctx["match_pages"] = max(1, -(-m["total"] // MATCH_PAGE))
+        ctx["match_page_size"] = MATCH_PAGE
+    if step == 4:
         ctx["rfps"] = rfp_match.match_rfps(con, cso_id)
-    if step >= 5:
+        ctx["matches"] = matching.match_for_cso(con, cso_id, limit=8)
+        ctx["model_name"] = DRAFT_MODEL
+    if step == 5:
         ctx["drafts"] = [dict(r) for r in con.execute("SELECT draft_id, created_at, mode, model, funder_cin, rfp_id FROM drafts WHERE cso_id=? ORDER BY draft_id DESC", (cso_id,))]
+        ctx["matches"] = matching.match_for_cso(con, cso_id, limit=10)
+        ctx["rfps"] = rfp_match.match_rfps(con, cso_id)
         ctx["model_name"] = DRAFT_MODEL
     return render(request, "hub_cso.html", con, **ctx)
 

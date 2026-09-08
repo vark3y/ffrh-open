@@ -38,7 +38,7 @@ class MatchInput:
     ask_max_lakh: float | None = None
 
 
-def match(con: sqlite3.Connection, inp: MatchInput, limit: int = 15) -> dict:
+def match(con: sqlite3.Connection, inp: MatchInput, limit: int = 15, offset: int = 0) -> dict:
     src = MCA_CSR.source_id
     themes = [t for t in inp.themes if t in THEME_LABELS] or ["livelihoods"]
     fam = set(themes)
@@ -146,21 +146,42 @@ def match(con: sqlite3.Connection, inp: MatchInput, limit: int = 15) -> dict:
         name = con.execute("SELECT name FROM funders WHERE cin=?", (cin,)).fetchone()["name"]
         results.append({"cin": cin, "name": name, "score": round(score, 1), "max_score": sum(WEIGHTS.values()),
                         "ne_recent_cr": c["total"], "median_project_lakh": round(median_lakh, 1) if median_lakh else None,
-                        "scale_fit": fit, "reasons": reasons})
+                        "scale_fit": fit, "reasons": reasons, **band(score)})
     results.sort(key=lambda r: (-r["score"], -r["ne_recent_cr"]))
-    return {"input": inp.__dict__, "weights": WEIGHTS, "candidates": len(results), "matches": results[:limit],
+    total = len(results)
+    page = results[offset:offset + limit] if limit else results[offset:]
+    return {"input": inp.__dict__, "weights": WEIGHTS, "candidates": total, "total": total,
+            "matches": page, "offset": offset, "limit": limit,
+            "bands": {b: sum(1 for r in results if r["band"] == b) for b in ("strong", "worth", "weak")},
             "method": "Rule-based score over filed CSR spend FY2021-22 to FY2023-24. Theme 25, state 20, district 10, "
                       "sub-area 10, agency routing 10, latest-year activity 10, scale 10, logged funding signal 5. "
                       "Scores rank plausibility of a conversation, not likelihood of a grant."}
 
 
-def match_for_cso(con: sqlite3.Connection, cso_id: str, limit: int = 15) -> dict | None:
+# A score out of 100 read alone looks like a credit rating. Every score is shown with a plain-language
+# band and a sentence saying what it does and does not mean.
+BANDS = [
+    (70, "strong", "Strong overlap", "Files in this theme and this state, recently, and works through partners."),
+    (50, "worth", "Worth a look", "Overlaps on some of theme, state and sub-area, but not all of them."),
+    (0, "weak", "Thin overlap", "Little in the filings connects this funder to this organisation's work."),
+]
+
+
+def band(score: float) -> dict:
+    for floor, bid, label, meaning in BANDS:
+        if score >= floor:
+            return {"band": bid, "band_label": label, "band_meaning": meaning,
+                    "band_dots": 5 if bid == "strong" else 3 if bid == "worth" else 1}
+    return {"band": "weak", "band_label": "Thin overlap", "band_meaning": "", "band_dots": 1}
+
+
+def match_for_cso(con: sqlite3.Connection, cso_id: str, limit: int = 15, offset: int = 0) -> dict | None:
     c = con.execute("SELECT * FROM cso_profiles WHERE cso_id=?", (cso_id,)).fetchone()
     if not c:
         return None
     inp = MatchInput(themes=json.loads(c["themes"]), state_code=c["state_code"],
                      subareas=json.loads(c["subareas"] or "[]"), districts=json.loads(c["districts"] or "[]"),
                      ask_min_lakh=c["ask_min_lakh"], ask_max_lakh=c["ask_max_lakh"])
-    out = match(con, inp, limit)
+    out = match(con, inp, limit, offset)
     out["cso"] = {"cso_id": c["cso_id"], "display_name": c["display_name"], "is_stand_in": bool(c["is_stand_in"])}
     return out
