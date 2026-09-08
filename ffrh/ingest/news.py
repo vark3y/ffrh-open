@@ -34,7 +34,7 @@ STATE_RX = {
 }
 NE_RX = re.compile(r"north[- ]?east", re.I)
 FUNDING_RX = re.compile(r"\bCSR\b|corporate social|foundation|grant|MoU|funds?\b|funded|sanction|philanthrop|donat|invest|scheme|skill(ing)?\b|livelihood|self[- ]help|SHG|entrepreneur", re.I)
-STRONG_FUNDING_RX = re.compile(r"\bCSR\b|corporate social responsibility|\bgrants?\b|\bgranted\b|\bMoU\b|sanction(ed|s)?\b|philanthrop|\bfoundation(?! day| stone)\b|(crore|lakh)[^.]{0,60}\b(project|fund|scheme|livelihood|skill|SHG|women|farmer|entrepreneur)", re.I)
+STRONG_FUNDING_RX = re.compile(r"\bCSR\b|corporate social responsibility|\bMoU\b|\bgrants?\b[^.]{0,80}\b(NGO|organisation|organization|livelihood|SHG|self[- ]help|women|farmer|artisan|weaver|entrepreneur)|\b(NGO|organisation|organization|livelihood|SHG|self[- ]help|women|farmer|artisan|weaver|entrepreneur)[^.]{0,80}\bgrants?\b", re.I)
 THEME_RX = {
     "livelihoods": re.compile(r"livelihood|skill|employment|entrepreneur|SHG|self[- ]help|handloom|weav|farmer|agri|piggery|poultry|fisher", re.I),
     "women": re.compile(r"\bwomen\b|gender|girl", re.I),
