@@ -2,7 +2,7 @@
 <h1>Advisory view: the funder landscape and what is moving</h1>
 <div class="grid g3">
 {% set n = landscape.national[-1] %}<div class="card kpi"><div class="n">{{ n.ne_share_pct }}%</div><div class="l">NE share of filed CSR spend, FY{{ n.fy }} (₹{{ '{:,.0f}'.format(n.ne_cr) }} cr of ₹{{ '{:,.0f}'.format(n.national_cr) }} cr) {{ ev(landscape.source) }}</div></div>
-<div class="card kpi"><div class="n">{{ landscape.top_funders|length }}+</div><div class="l">funders with ≥₹1 cr filed NE spend FY22–24: {% for f in landscape.top_funders[:5] %}<a href="/funders/{{ f.cin }}">{{ f.name.title() }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div></div>
+<div class="card kpi"><div class="n">{{ landscape.funders_over_1cr_recent }}</div><div class="l">funders with ≥₹1 cr filed NE spend FY22–24 {{ ev(landscape.source) }}. Largest: {% for f in landscape.top_funders[:5] %}<a href="/funders/{{ f.cin }}">{{ f.name.title() }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div></div>
 <div class="card kpi"><div class="n">{{ feed.counts.funding }} / {{ feed.counts.narrative }}</div><div class="l">funding signals / broader narrative items in the public feed. {{ feed.weighting }}</div></div>
 </div>
 <h2>Where the money went, FY2023-24</h2>

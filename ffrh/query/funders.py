@@ -120,6 +120,8 @@ def landscape(con: sqlite3.Connection) -> dict:
     by_theme_fy = [dict(r) for r in con.execute("""SELECT fy, theme, ROUND(SUM(spent_cr),2) cr, COUNT(DISTINCT cin) funders
                                                    FROM csr_projects GROUP BY fy, theme ORDER BY fy, cr DESC""")]
     top = list_funders(con, limit=25)
-    return {"national": nat, "by_state_fy": by_state_fy, "by_theme_fy": by_theme_fy, "top_funders": top,
+    over_1cr = con.execute("""SELECT COUNT(*) FROM (SELECT cin, SUM(spent_cr) s FROM csr_projects
+                              WHERE fy IN ('2021-22','2022-23','2023-24') GROUP BY cin HAVING s>=1)""").fetchone()[0]
+    return {"national": nat, "funders_over_1cr_recent": over_1cr, "by_state_fy": by_state_fy, "by_theme_fy": by_theme_fy, "top_funders": top,
             "theme_labels": THEME_LABELS,
             "source": ev.make(con, src, "csr_projects (all NE rows) and national_totals").as_dict()}
