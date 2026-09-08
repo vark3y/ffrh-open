@@ -1,17 +1,45 @@
 {% extends "base.html" %}{% from "_macros.html" import ev, claim, bar %}{% block title %}{{ p.name }}{% endblock %}{% block body %}
-<h1>{{ p.name }}</h1><p class="muted small">CIN {{ p.cin }} · {{ p.roc }} {% if p.is_ne_registered %}<span class="badge public">NE-registered</span>{% endif %}</p>
+{% set hero_total = p.by_fy|selectattr('fy','in', ['2021-22','2022-23','2023-24'])|sum(attribute='cr') %}
+<div class="pagehead">
+<div class="eyebrow">Funder profile</div>
+<h1>{{ p.name|title }}{% if p.is_ne_registered %} <span class="badge public">NE-registered</span>{% endif %}</h1>
+<div class="sub">Filed as <code>{{ p.name }}</code> &middot; CIN {{ p.cin }} &middot; {{ p.roc }}</div>
+</div>
+<div class="tabbar">{% for id, label in tabs %}<a href="/funders/{{ p.cin }}?tab={{ id }}" class="{% if tab==id %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
+
+{% if tab == 'overview' %}
+<div class="trustrow">
+<span class="t">Filed with the National CSR Portal</span>
+<span class="t{% if not p.is_ne_registered %} no{% endif %}">Registered with a North East ROC</span>
+<span class="t{% if not signals %} no{% endif %}">Independent public signals on file</span>
+</div>
+<div class="herostat">
+<div><span class="figure">&#8377;{{ '{:,.2f}'.format(hero_total) }}</span><span class="unit">cr</span></div>
+<div class="cap">Reported CSR spend in the North East, FY2021-22 to FY2023-24, per National CSR Portal filings.
+{% if p.attributes %}{% for e in p.attributes[0].evidence %}{{ ev(e) }}{% endfor %}{% endif %}</div>
+</div>
 <h2>What the filings say</h2>
 {% for a in p.attributes %}{{ claim(a) }}{% endfor %}
 <div class="banner">{% for c in p.caveats %}{{ c }} {% endfor %}</div>
+
+{% elif tab == 'trends' %}
 <div class="grid g2">
-<div class="card"><h3>NE spend by year</h3>{% set mx = p.by_fy|map(attribute='cr')|max %}{% for r in p.by_fy %}<div class="small">FY{{ r.fy }} · ₹{{ '%.2f'|format(r.cr) }} cr · {{ r.n }} lines</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
-<div class="card"><h3>FY22–24 by state</h3>{% set mx = p.by_state|map(attribute='cr')|max if p.by_state else 1 %}{% for r in p.by_state %}<div class="small">{{ r.state.title() }} · ₹{{ '%.2f'|format(r.cr) }} cr <span class="muted">{{ r.districts }}</span></div>{{ bar(r.cr, mx) }}{% endfor %}</div>
-<div class="card"><h3>FY22–24 by theme</h3>{% set mx = p.by_theme|map(attribute='cr')|max if p.by_theme else 1 %}{% for r in p.by_theme %}<div class="small">{{ r.label }} · ₹{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
-<div class="card"><h3>Livelihood sub-areas (keyword rule)</h3>{% if p.by_subarea %}{% set mx = p.by_subarea|map(attribute='cr')|max %}{% for r in p.by_subarea %}<div class="small">{{ r.label }} · ₹{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx, 'amber') }}{% endfor %}{% else %}<p class="muted small">No project names matched a sub-area rule.</p>{% endif %}</div>
+<div class="card"><h3>NE spend by year</h3>{% if p.by_fy %}{% set mx = p.by_fy|map(attribute='cr')|max %}{% for r in p.by_fy %}<div class="small">FY{{ r.fy }} &middot; &#8377;{{ '%.2f'|format(r.cr) }} cr &middot; {{ r.n }} lines</div>{{ bar(r.cr, mx) }}{% endfor %}{% else %}<p class="muted small">No filings on record.</p>{% endif %}</div>
+<div class="card"><h3>FY22&ndash;24 by state</h3>{% if p.by_state %}{% set mx = p.by_state|map(attribute='cr')|max %}{% for r in p.by_state %}<div class="small">{{ r.state.title() }} &middot; &#8377;{{ '%.2f'|format(r.cr) }} cr <span class="muted">{{ r.districts }}</span></div>{{ bar(r.cr, mx) }}{% endfor %}{% else %}<p class="muted small">No North East state spend in FY22&ndash;24.</p>{% endif %}</div>
 </div>
-{% if signals %}<h2>Public signals mentioning this company</h2><ul>{% for s in signals %}<li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a> <span class="small muted">{{ s.published_at }} · {{ s.signal_type }} · retrieved {{ s.retrieved_at }}</span></li>{% endfor %}</ul>{% endif %}
-<h2>Project lines (latest first)</h2>
-<table><tr><th>FY</th><th>State</th><th>District</th><th>Project as filed</th><th>Sector</th><th>Sub-area rule</th><th>Route</th><th class="num">₹ cr</th><th class="num">Raw row</th></tr>
+
+{% elif tab == 'top' %}
+<div class="grid g3">
+<div class="card"><h3>By theme (FY22&ndash;24)</h3>{% if p.by_theme %}{% set mx = p.by_theme|map(attribute='cr')|max %}{% for r in p.by_theme %}<div class="small">{{ r.label }} &middot; &#8377;{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx) }}{% endfor %}{% else %}<p class="muted small">No theme-tagged spend.</p>{% endif %}</div>
+<div class="card"><h3>Livelihood sub-areas <span class="small muted">(keyword rule)</span></h3>{% if p.by_subarea %}{% set mx = p.by_subarea|map(attribute='cr')|max %}{% for r in p.by_subarea %}<div class="small">{{ r.label }} &middot; &#8377;{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx, 'amber') }}{% endfor %}{% else %}<p class="muted small">No project names matched a sub-area rule.</p>{% endif %}</div>
+<div class="card"><h3>Implementation route</h3>{% if p.impl_mode %}{% set mx = p.impl_mode|map(attribute='cr')|max %}{% for r in p.impl_mode %}<div class="small">{{ (r.impl_mode or 'not stated')|title }} &middot; &#8377;{{ '%.2f'|format(r.cr) }} cr &middot; {{ r.n }} lines</div>{{ bar(r.cr, mx) }}{% endfor %}{% else %}<p class="muted small">Not stated in the filing.</p>{% endif %}</div>
+</div>
+
+{% elif tab == 'projects' %}
+<h2>Project lines <span class="small muted">(latest first, up to 60 shown)</span></h2>
+<table><tr><th>FY</th><th>State</th><th>District</th><th>Project as filed</th><th>Sector</th><th>Sub-area rule</th><th>Route</th><th class="num">&#8377; cr</th><th class="num">Raw row</th></tr>
 {% for r in p.projects %}<tr><td>{{ r.fy }}</td><td>{{ r.state_code }}</td><td>{{ r.district }}</td><td>{{ r.project_name }}</td><td class="small">{{ r.sector }}</td><td class="small">{{ r.subarea_rule or '' }}</td><td class="small">{{ r.impl_mode }}</td><td class="num">{{ '%.2f'|format(r.spent_cr) }}</td><td class="num small">{{ r.source_row }}</td></tr>{% endfor %}</table>
 <p class="small">{{ ev(p.source) }}</p>
+{% if signals %}<h2>Public signals mentioning this company</h2><ul>{% for s in signals %}<li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a> <span class="small muted">{{ s.published_at }} &middot; {{ s.signal_type }} &middot; retrieved {{ s.retrieved_at }}</span></li>{% endfor %}</ul>{% endif %}
+{% endif %}
 {% endblock %}

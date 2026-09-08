@@ -1,0 +1,86 @@
+{% extends "base.html" %}{% block title %}{{ intro.title }}{% endblock %}{% block body %}
+<div class="pagehead">
+  <div class="eyebrow">Open layer · no key, no account</div>
+  <h1>{{ intro.title }}</h1>
+  <p class="sub">{{ intro.blurb }}</p>
+</div>
+
+<div class="banner"><b>No authentication required.</b> {{ intro.auth }} Prefer something a machine can read? The full
+  schema is generated automatically at <code>/openapi.json</code>, and an interactive try-it-out console lives at
+  <a href="/docs">/docs</a> — both are the developer-facing, machine-readable alternative to this page.</div>
+
+{% if selected %}
+<div class="banner red">You followed a link to one endpoint. Jump straight to
+  <a href="#{{ selected }}">{{ selected }}</a>, or read the full index below first.</div>
+{% endif %}
+
+<h2>Common questions, answered by one call</h2>
+<p class="small muted" style="margin-top:-6px">Start here if you are not writing code yourself — each row below is a
+  real question with the exact call that answers it.</p>
+<div class="grid g2">
+{% for r in recipes %}
+  <div class="card"><p style="margin:0 0 8px;font-weight:600;font-size:14.5px">{{ r.q }}</p><code>{{ r.call }}</code></div>
+{% endfor %}
+</div>
+
+<h2>Every endpoint</h2>
+<p class="small muted" style="margin-top:-6px">The whole API in one table. No key, no account, no rate limit in this
+  prototype — please cache rather than hammer it.</p>
+<table class="endpoints">
+<tr><th>Method</th><th>Path</th><th>What it does</th></tr>
+{% for e in endpoints %}
+  <tr>
+    <td><span class="method {{ e.method|lower }}">{{ e.method }}</span></td>
+    <td><a href="#{{ e.id }}"><code>{{ e.path }}</code></a></td>
+    <td>{{ e.summary }}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<h2>Endpoint reference</h2>
+{% for e in endpoints %}
+<div id="{{ e.id }}" class="card" style="margin:22px 0 34px">
+  <p style="margin:0 0 4px"><span class="method {{ e.method|lower }}">{{ e.method }}</span>
+    <code style="font-size:14px;margin-left:6px">{{ e.path }}</code></p>
+  <div class="apisplit">
+    <div>
+      <p class="lead">{{ e.plain }}</p>
+      <p class="small muted">{{ e.summary }}</p>
+
+      {% if e.params %}
+      <h4 style="margin-bottom:0">Parameters</h4>
+      {% for name, type, required, desc in e.params %}
+      <div class="param">
+        <span class="pn">{{ name }}</span><span class="pt">{{ type }}</span>{% if required %}<span class="req">required</span>{% endif %}
+        <p>{{ desc }}</p>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="small muted">No parameters.</p>
+      {% endif %}
+
+      {% if e.method == 'GET' %}
+      <p class="small" style="margin-top:14px">Try it in your browser: <a href="{{ e.example }}">{{ e.example }}</a></p>
+      {% else %}
+      <p class="small muted" style="margin-top:14px">This endpoint reads a JSON body, so it cannot be opened as a
+        link — use the <code>curl</code> example on the right, or call it from any HTTP client.</p>
+      {% endif %}
+    </div>
+
+    <div class="rt">
+      <div class="codehead"><span>Request</span></div>
+      {% if e.method == 'GET' %}
+      <pre class="code">GET {{ e.example }}</pre>
+      {% else %}
+      <pre class="code">curl -X POST '{{ e.path }}' \
+  -H 'Content-Type: application/json' \
+  -d '{{ e.body }}'</pre>
+      {% endif %}
+
+      <div class="codehead" style="margin-top:16px"><span>Response</span></div>
+      <pre class="code">{{ e.response }}</pre>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

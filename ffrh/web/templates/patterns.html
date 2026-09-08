@@ -1,17 +1,168 @@
-{% extends "base.html" %}{% from "_macros.html" import ev, bar %}{% block title %}Patterns{% endblock %}{% block body %}
-<h1>Patterns: what gets funded in the North East</h1>
-<form class="inline" method="get"><div><label>State</label><select name="state"><option value="">all eight</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div><button>Apply</button></form>
-<h2>Livelihood sub-areas, FY2021-22 to FY2023-24</h2>
+{% extends "base.html" %}{% from "_macros.html" import ev, bar %}{% block title %}Patterns &amp; landscape{% endblock %}
+
+{# ------------------------------------------------------------------ hex cartogram #}
+{% macro hexmap(h, caption=true) %}
+<div class="hexwrap">
+  <svg class="hexmap" viewBox="{{ h.viewbox }}" width="{{ [h.width, 320]|min }}" height="{{ (h.height * ([h.width, 320]|min) / h.width)|round|int }}"
+       role="img" aria-label="Hex tile map of the eight North East states, shaded by CSR spend.">
+    {% for t in h.tiles %}
+    <g class="hx"><title>{{ t.name }}: ₹{{ '%.2f'|format(t.cr) }} crore from {{ t.funders }} funders</title>
+      <polygon points="{{ t.points }}" fill="{{ t.fill }}"></polygon>
+      <text class="abbr" x="{{ t.cx }}" y="{{ t.cy - 1 }}" fill="{{ t.ink }}">{{ t.code }}</text>
+      <text class="val" x="{{ t.cx }}" y="{{ t.cy + 13 }}" fill="{{ t.ink }}">{{ t.label }}</text>
+    </g>
+    {% endfor %}
+  </svg>
+  <div>
+    <div class="hexlegend">
+      <div><b>₹ crore, FY{{ h.fy }}</b></div>
+      <div class="scale">{% for c in h.ramp %}<i style="background:{{ c }}"></i>{% endfor %}</div>
+      <div class="ends"><span>₹{{ '%.1f'|format(h.min_cr) }}</span><span>₹{{ '%.0f'|format(h.max_cr) }}</span></div>
+    </div>
+    <table style="margin-top:12px;max-width:330px">
+      <tr><th>State</th><th class="num">₹ cr</th><th class="num">Share</th><th class="num">Funders</th></tr>
+      {% for t in h.tiles %}<tr><td>{{ t.name }}</td><td class="num">{{ '%.2f'|format(t.cr) }}</td><td class="num">{{ '%.0f'|format(t.share * 100) }}%</td><td class="num">{{ t.funders }}</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+{% if caption %}<p class="small muted" style="max-width:640px;margin-top:10px">{{ h.note }}</p>{% endif %}
+{% endmacro %}
+
+{# ------------------------------------------------------------------ one finding's visual #}
+{% macro visual(f) %}
+{% if f.visual == 'share_series' %}
+  {% set mx = f.data|map(attribute='ne_share_pct')|max %}
+  <div class="card">
+    <h3>North East share of filed CSR spend, by year</h3>
+    {% for r in f.data %}
+      <div class="small" style="display:flex;justify-content:space-between"><span>FY{{ r.fy }}</span><span class="muted">₹{{ '{:,.0f}'.format(r.ne_cr) }} cr of ₹{{ '{:,.0f}'.format(r.national_cr) }} cr · <b>{{ r.ne_share_pct }}%</b></span></div>
+      {{ bar(r.ne_share_pct, mx) }}
+    {% endfor %}
+  </div>
+
+{% elif f.visual == 'hexmap' %}
+  {{ hexmap(f.data, caption=false) }}
+
+{% elif f.visual == 'theme_bars' %}
+  {% set mx = f.data|map(attribute='cr')|max %}
+  <div class="card"><h3>Spend by theme, FY2023-24</h3>
+  {% for r in f.data %}
+    <div class="small" style="display:flex;justify-content:space-between"><span>{{ theme_labels.get(r.theme, r.theme) }}</span><span class="muted">₹{{ r.cr }} cr · {{ r.funders }} funders</span></div>
+    {{ bar(r.cr, mx, 'amber' if r.theme in ['livelihoods','women','rural_development','poverty_nutrition'] else '') }}
+  {% endfor %}
+  <p class="small muted" style="margin-top:10px">Amber bars are the livelihoods family, where the current cohort works.</p></div>
+
+{% elif f.visual == 'subarea_bars' %}
+  {% set mx = f.data|map(attribute='cr')|max %}
+  <div class="card"><h3>Livelihood sub-areas, FY2021-22 to FY2023-24</h3>
+  {% for r in f.data %}
+    <div class="small" style="display:flex;justify-content:space-between"><span>{{ r.label }}</span><span class="muted">₹{{ r.cr }} cr · {{ r.funders }} funders</span></div>
+    {{ bar(r.cr, mx, 'amber') }}
+  {% endfor %}
+  <div class="banner" style="margin-top:14px"><b>₹{{ f.extra.unclassified_cr }} crore unclassified</b> across {{ f.extra.unclassified_n }} project lines, against ₹{{ f.extra.classified_cr }} crore we can place. The filings name projects too vaguely to tell what the money bought.</div>
+  </div>
+
+{% elif f.visual == 'route_split' %}
+  {% set tot = f.data|map(attribute='cr')|sum %}
+  <div class="card"><h3>How money reaches the ground, FY2021-22 to FY2023-24</h3>
+  {% for r in f.data %}
+    {% set label = {'agency':'Through an implementing agency','direct':'Spent directly by the company','unstated':'Route not stated in the filing'}.get(r.impl_mode, r.impl_mode) %}
+    <div class="small" style="display:flex;justify-content:space-between"><span>{{ label }}</span><span class="muted">₹{{ r.cr }} cr · {{ r.funders }} funders</span></div>
+    {{ bar(r.cr, tot, '' if r.impl_mode == 'agency' else 'amber') }}
+  {% endfor %}
+  <p class="small muted" style="margin-top:10px">The filings never name which agency received the money, so the funder-to-nonprofit link cannot be built from this source.</p></div>
+
+{% elif f.visual == 'shift_slopes' %}
+  <div class="card"><h3>Theme share moved, FY2021-22 to FY2023-24</h3>
+  <svg viewBox="0 0 320 {{ 30 + f.data|length * 26 }}" width="100%" style="max-width:340px" role="img" aria-label="Slope chart of theme share change by funder.">
+    <text x="34" y="12" font-size="9" fill="#7a7466" text-anchor="middle">FY22</text>
+    <text x="196" y="12" font-size="9" fill="#7a7466" text-anchor="middle">FY24</text>
+    {% for m in f.data %}
+      {% set y = 28 + loop.index0 * 26 %}
+      <line x1="34" y1="{{ y }}" x2="196" y2="{{ y }}" stroke="#efe8d8" stroke-width="1"></line>
+      <circle cx="34" cy="{{ y }}" r="3.5" fill="#c9cbe6"></circle>
+      <circle cx="196" cy="{{ y }}" r="3.5" fill="#33418f"></circle>
+      <text x="26" y="{{ y + 3 }}" font-size="9" fill="#7a7466" text-anchor="end">{{ (m.from * 100)|round|int }}%</text>
+      <text x="204" y="{{ y + 3 }}" font-size="9.5" fill="#211f1a" font-weight="600">{{ (m.to * 100)|round|int }}%</text>
+      <text x="34" y="{{ y - 7 }}" font-size="9.5" fill="#211f1a">{{ m.name|title|truncate(26, true) }} · {{ theme_labels.get(m.theme, m.theme) }}</text>
+    {% endfor %}
+  </svg>
+  <p class="small muted">Each line is one funder's share of its own North East spending going to that theme.</p></div>
+
+{% elif f.visual == 'cta' %}
+  <div class="card"><h3>Where to go next</h3>
+    <p class="small">Browse the funders with the filters, or open the matching engine against a real profile.</p>
+    <p><a class="btn" href="/funders?amount=1to10&amp;sort=recent">Browse funders</a> <a class="btn secondary" href="/hub/enter">Protected layer</a></p>
+  </div>
+{% endif %}
+{% endmacro %}
+
+{% block body %}
+{% set f = findings[step - 1] %}
+<div class="pagehead">
+  <div class="eyebrow">Patterns &amp; landscape · open layer</div>
+  <h1>What the filings actually show</h1>
+  <p class="sub">Seven findings, computed from the National CSR Portal ledger. Every sentence on this page is generated
+  from the data and carries its source, so it changes when the filings change.
+  {% if view == 'story' %}<a href="/patterns?view=all">See all of it on one page</a>.{% else %}<a href="/patterns?view=story&amp;step=1">Read it as findings</a>.{% endif %}</p>
+</div>
+
+{% if view == 'story' %}
+<div class="stepnav">
+  <div class="dots">{% for x in findings %}<a href="/patterns?step={{ loop.index }}" class="{% if loop.index == step %}on{% endif %}" title="{{ x.kicker }}"></a>{% endfor %}</div>
+  <span class="of">Finding {{ step }} of {{ findings|length }}</span>
+</div>
+
+<div class="grid g2" style="align-items:start">
+  <div class="finding">
+    <div class="fnum">{{ f.kicker }}</div>
+    <h2>{{ f.title }}</h2>
+    <p class="say">{{ f.say }}</p>
+    <p>{% for e in f.evidence %}{{ ev(e) }}{% endfor %}</p>
+    {% if f.caveat %}<div class="banner"><b>Read it carefully.</b> {{ f.caveat }}</div>{% endif %}
+  </div>
+  <div>{{ visual(f) }}</div>
+</div>
+
+<div class="findnav">
+  {% if step > 1 %}<a class="btn secondary" href="/patterns?step={{ step - 1 }}">Back: {{ findings[step - 2].kicker }}</a>{% else %}<span></span>{% endif %}
+  {% if step < findings|length %}<a class="btn" href="/patterns?step={{ step + 1 }}">Next: {{ findings[step].kicker }}</a>{% else %}<a class="btn" href="/patterns?view=all">See the full tables</a>{% endif %}
+</div>
+
+{% else %}
+{# ---------------- everything at once: no JavaScript, prints, and hides nothing ---------------- #}
+{% for f in findings %}
+<div style="margin-bottom:34px">
+  <div class="fnum">{{ f.kicker }}</div>
+  <h2 style="margin-top:4px">{{ f.title }}</h2>
+  <div class="grid g2" style="align-items:start">
+    <div>
+      <p class="say">{{ f.say }}</p>
+      <p>{% for e in f.evidence %}{{ ev(e) }}{% endfor %}</p>
+      {% if f.caveat %}<p class="small muted">{{ f.caveat }}</p>{% endif %}
+    </div>
+    <div>{{ visual(f) }}</div>
+  </div>
+</div>
+{% endfor %}
+
+<h2>Livelihood sub-areas, filtered by state</h2>
+<form class="inline" method="get"><input type="hidden" name="view" value="all">
+  <div><label>State</label><select name="state"><option value="">all eight</option>{% for k, v in states.items() %}<option value="{{ k }}" {% if state == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <button class="secondary">Apply</button></form>
 <p class="small muted">{{ data.method }}</p>
 {% set mx = data.subareas|map(attribute='recent_cr')|max if data.subareas else 1 %}
-{% for d in data.subareas %}<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:12px"><b>{{ d.label }}</b><span>₹{{ d.recent_cr }} cr · {{ d.recent_funders }} funders · {{ d.recent_n }} lines {{ ev(d.evidence) }}</span></div>{{ bar(d.recent_cr, mx, 'amber') }}
-<div class="small" style="margin-top:6px">Top filers: {% for t in d.top_funders %}<a href="/funders/{{ t.cin }}">{{ t.name.title() }}</a> (₹{{ t.cr }} cr){% if not loop.last %}, {% endif %}{% endfor %}</div>
-<div class="small muted">Examples as filed: {% for e in d.examples[:3] %}“{{ e.project_name }}” ({{ e.state_code }}, FY{{ e.fy }}, rule {{ e.subarea_rule }}){% if not loop.last %}; {% endif %}{% endfor %}</div></div>{% endfor %}
-<p class="small muted">Unclassified livelihood-family lines: ₹{{ data.unclassified.cr }} cr across {{ data.unclassified.n }} lines. {{ data.unclassified.note }}</p>
-<h2>Landscape by state and theme</h2>
-<div class="grid g2">
-<div class="card"><h3>NE spend by state, FY2023-24</h3>{% set rows = landscape.by_state_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows|sort(attribute='cr', reverse=True) %}<div class="small">{{ states[r.state_code] }} · ₹{{ r.cr }} cr · {{ r.funders }} funders</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
-<div class="card"><h3>NE spend by theme, FY2023-24</h3>{% set rows = landscape.by_theme_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows %}<div class="small">{{ theme_labels[r.theme] }} · ₹{{ r.cr }} cr · {{ r.funders }} funders</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+{% for d in data.subareas %}
+<div class="card" style="margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;gap:12px"><b>{{ d.label }}</b><span class="small">₹{{ d.recent_cr }} cr · {{ d.recent_funders }} funders · {{ d.recent_n }} lines {{ ev(d.evidence) }}</span></div>
+  {{ bar(d.recent_cr, mx, 'amber') }}
+  <div class="small" style="margin-top:6px">Top filers: {% for t in d.top_funders %}<a href="/funders/{{ t.cin }}">{{ t.name|title }}</a> (₹{{ t.cr }} cr){% if not loop.last %}, {% endif %}{% endfor %}</div>
+  <div class="small muted">As filed: {% for e in d.examples[:3] %}“{{ e.project_name }}” ({{ e.state_code }}, FY{{ e.fy }}, rule {{ e.subarea_rule }}){% if not loop.last %}; {% endif %}{% endfor %}</div>
 </div>
-<p class="small">{{ ev(landscape.source) }}</p>
+{% else %}<p class="muted">No classified livelihood lines in this state.</p>{% endfor %}
+<p class="small muted">Unclassified: ₹{{ data.unclassified.cr }} cr across {{ data.unclassified.n }} lines. {{ data.unclassified.note }}</p>
+
+<h2>The region at a glance, FY2023-24</h2>
+{{ hexmap(hex_latest) }}
+{% endif %}
 {% endblock %}

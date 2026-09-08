@@ -1,11 +1,74 @@
 {% extends "base.html" %}{% block title %}Funders{% endblock %}{% block body %}
-<h1>Funders with filed CSR spend in the North East</h1>
-<form class="inline" method="get"><div><label>Name</label><input type="text" name="q" value="{{ q }}"></div>
-<div><label>State</label><select name="state"><option value="">any</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
-<div><label>Theme</label><select name="theme"><option value="">any</option>{% for k,v in theme_labels.items() %}<option value="{{ k }}" {% if theme==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
-<button>Filter</button></form>
-<p class="small muted">Sorted by FY2021-22 to FY2023-24 spend in the NE. Source: National CSR Portal, retrieved 2026-05-07.</p>
-<table><tr><th>Company</th><th class="num">NE ₹ cr FY22–24</th><th class="num">NE ₹ cr all years</th><th class="num">Lines</th><th class="num">States</th><th>Last FY</th></tr>
-{% for r in rows %}<tr><td><a href="/funders/{{ r.cin }}">{{ r.name }}</a>{% if r.is_ne_registered %} <span class="badge public">NE-registered</span>{% endif %}</td>
-<td class="num">{{ '%.2f'|format(r.ne_spent_cr_recent) }}</td><td class="num">{{ '%.2f'|format(r.ne_spent_cr_all) }}</td><td class="num">{{ r.projects }}</td><td class="num">{{ r.states }}</td><td>{{ r.last_fy }}</td></tr>{% endfor %}</table>
+{% macro qs(exclude=none, override_page=none) -%}
+{% set parts = [] %}
+{% if override_page %}{% set _ = parts.append('page=' ~ override_page) %}{% endif %}
+{% if q and exclude != 'q' %}{% set _ = parts.append('q=' ~ q|urlencode) %}{% endif %}
+{% if state and exclude != 'state' %}{% set _ = parts.append('state=' ~ state) %}{% endif %}
+{% if theme and exclude != 'theme' %}{% set _ = parts.append('theme=' ~ theme) %}{% endif %}
+{% if amount and amount != 'any' and exclude != 'amount' %}{% set _ = parts.append('amount=' ~ amount) %}{% endif %}
+{% if sort and sort != 'recent' %}{% set _ = parts.append('sort=' ~ sort) %}{% endif %}
+/funders{% if parts %}?{{ parts|join('&') }}{% endif %}
+{%- endmacro %}
+<div class="pagehead">
+<div class="eyebrow">Companies &middot; National CSR Portal</div>
+<h1>
+{%- if q -%}
+&ldquo;{{ q }}&rdquo; in filed CSR spend
+{%- elif state -%}
+Companies that reported CSR spend in {{ states[state] }}
+{%- elif theme -%}
+Companies funding {{ theme_labels[theme] }} in the North East
+{%- elif amount and amount != 'any' -%}
+Companies in the {{ buckets[amount][2]|lower }} range
+{%- else -%}
+Companies with filed CSR spend in the North East
+{%- endif -%}
+</h1>
+<div class="sub">{{ '{:,}'.format(total) }} compan{{ 'y' if total == 1 else 'ies' }} match{{ 'es' if total == 1 else '' }} these filters, drawn from statutory CSR filings to the National CSR Portal. Sorted by {{ sorts[sort][1]|lower if sort in sorts else sorts['recent'][1]|lower }}.</div>
+</div>
+<div class="withrail">
+<aside class="rail">
+<form method="get" action="/funders">
+<div class="grp"><label>Company name</label><input type="text" name="q" value="{{ q }}" placeholder="Search by name"></div>
+<div class="grp"><label>State</label><select name="state"><option value="">Any state</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+<div class="grp"><label>Theme</label><select name="theme"><option value="">Any theme</option>{% for k,v in theme_labels.items() %}<option value="{{ k }}" {% if theme==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+<div class="grp"><label>NE spend, FY22&ndash;24</label>
+{% for k,v in buckets.items() %}<label class="opt"><input type="radio" name="amount" value="{{ k }}" {% if amount==k %}checked{% endif %}> {{ v[2] }}</label>{% endfor %}
+</div>
+<div class="grp"><label>Sort by</label><select name="sort">{% for k,v in sorts.items() %}<option value="{{ k }}" {% if sort==k %}selected{% endif %}>{{ v[1] }}</option>{% endfor %}</select></div>
+<button type="submit">Apply filters</button>
+</form>
+</aside>
+<div>
+{% if active %}
+<div class="chips">
+{% for k,v,lab in active %}<span class="chip">{{ lab }} <a href="{{ qs(exclude=k) }}" title="Remove">&times;</a></span>{% endfor %}
+<a class="clear" href="/funders">Clear all</a>
+</div>
+{% endif %}
+{% set start = ((page - 1) * page_size + 1) if total else 0 %}
+{% set end = [page * page_size, total]|min %}
+<p class="resultcount">Showing {{ '{:,}'.format(start) }}&ndash;{{ '{:,}'.format(end) }} of {{ '{:,}'.format(total) }}</p>
+<div class="results">
+{% for r in rows %}
+<div class="rescard">
+<div class="who">
+<div class="name"><a href="/funders/{{ r.cin }}">{{ r.name|title }}</a>{% if r.is_ne_registered %} <span class="badge public">NE-registered</span>{% endif %}</div>
+<div class="meta">{{ r.projects }} project line{{ 's' if r.projects != 1 else '' }} &middot; {{ r.states }} state{{ 's' if r.states != 1 else '' }} ({{ r.state_codes.replace(',', ', ') }}) &middot; last filed FY{{ r.last_fy }}</div>
+</div>
+<div class="metric"><div class="v">&#8377;{{ '%.2f'|format(r.ne_spent_cr_recent) }}</div><div class="k">cr &middot; FY22&ndash;24 NE</div></div>
+</div>
+{% else %}
+<p class="muted">No companies match these filters.</p>
+{% endfor %}
+</div>
+{% if pages > 1 %}
+<div class="chips" style="margin-top:18px">
+{% if page > 1 %}<a class="btn secondary" href="{{ qs(override_page=page-1) }}">&larr; Previous</a>{% endif %}
+<span class="small muted">Page {{ page }} of {{ pages }}</span>
+{% if page < pages %}<a class="btn secondary" href="{{ qs(override_page=page+1) }}">Next &rarr;</a>{% endif %}
+</div>
+{% endif %}
+</div>
+</div>
 {% endblock %}

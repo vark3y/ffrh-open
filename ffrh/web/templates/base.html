@@ -11,7 +11,7 @@
  {% set here = 'team' if path.startswith('/hub/team') else ('advisory' if path.startswith('/hub/advisory') else ('cso' if path.startswith('/hub/cso') else none)) %}
  {% for p, home in [('team','/hub/team'), ('advisory','/hub/advisory'), ('cso','/hub/cso')] %}
  {% set label = {'team':'FFRH team board','advisory':'Advisory view','cso':'CSO guided flow'}[p] %}
- <a class="item{% if (here == p) or (here is none and persona == p) %} on{% endif %}" href="{% if persona %}/hub/as/{{ p }}{% else %}{{ home }}{% endif %}">{{ label }}</a>
+ <a class="item{% if here == p %} on{% endif %}" href="{% if persona %}/hub/as/{{ p }}{% else %}{{ home }}{% endif %}">{{ label }}</a>
  {% endfor %}
  {% if not persona %}<a class="item" href="/hub/enter">Enter as a persona →</a>{% endif %}
 </nav>

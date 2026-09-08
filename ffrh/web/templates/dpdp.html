@@ -1,4 +1,59 @@
 {% extends "base.html" %}{% block title %}Data protection{% endblock %}{% block body %}
-<h1>Data protection notes</h1><p class="muted small">Rendered from DPDP_NOTES.md in the repository.</p>
-<pre style="white-space:pre-wrap;font:14px/1.5 inherit;background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px">{{ notes }}</pre>
+
+<div class="psec wide">
+  <div class="ptag">Data protection</div>
+  <h1 style="font-size:34px;margin:0 0 16px;line-height:1.2">{{ headline }}</h1>
+  <p class="big">{{ standfirst }}</p>
+</div>
+
+<hr class="prule">
+
+{% for s in sections %}
+{% set flagged = s.tag in ('The unresolved part', 'Still open') %}
+<div class="psec{% if s['cards'] %} wide{% endif %}">
+  <div class="ptag">{{ s.tag }}</div>
+  <h2>{{ s.title }}</h2>
+
+  {% if flagged %}
+  <div class="banner red">
+    {% for para in s.body %}<p style="margin:0{% if not loop.last %} 0 10px{% endif %}">{{ para }}</p>{% endfor %}
+  </div>
+  {% else %}
+  {% for para in s.body %}<p>{{ para }}</p>{% endfor %}
+  {% endif %}
+
+  {% if s['cards'] %}
+  <div class="pgrid">
+    {% for it in s['cards'] %}
+    <div class="pitem">
+      {% if flagged %}<span class="badge withheld" style="margin-bottom:6px">{{ 'Not loaded' if s.tag == 'The unresolved part' else 'Open question' }}</span><br>{% endif %}
+      <h4>{{ it.h }}</h4>
+      <p>{{ it.p }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<hr class="prule">
+{% endfor %}
+
+<div class="psec wide">
+  <div class="ptag">Verify it</div>
+  <h2>Where each promise is actually enforced</h2>
+  <p>This is not a policy document asking for trust. Every claim above maps to code and a test — open the file and check.</p>
+  <table>
+    <tr><th>Promise</th><th>Enforced in</th><th>How</th></tr>
+    {% for promise, path, explanation in enforcement %}
+    <tr><td>{{ promise }}</td><td><code>{{ path }}</code></td><td class="small muted">{{ explanation }}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="small muted" style="margin-top:16px">
+    The full working notes — the version a reviewer or a lawyer reads — are in
+    <a href="https://github.com/vark3y/ffrh-open/blob/main/DPDP_NOTES.md" target="_blank" rel="noopener"><code>DPDP_NOTES.md</code></a>
+    in the repository. Every source referenced on this page is listed, with its retrieval date, on the
+    <a href="/sources">source registry</a>.
+  </p>
+</div>
+
 {% endblock %}

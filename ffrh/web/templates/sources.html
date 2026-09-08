@@ -1,5 +1,47 @@
 {% extends "base.html" %}{% block title %}Sources{% endblock %}{% block body %}
-<h1>Source registry</h1><p class="lead">Every fact in this prototype points at one of these rows. Add a row before ingesting anything new.</p>
-<table><tr><th>Id</th><th>Name</th><th>Publisher</th><th>Retrieved</th><th>Covers</th><th>Licence</th><th>Personal data</th></tr>
-{% for r in rows %}<tr><td><code>{{ r.source_id }}</code></td><td>{{ r.name }}<div class="small muted">{{ r.notes }}</div></td><td>{{ r.publisher }}<div class="small"><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.url }}</a></div></td><td>{{ r.retrieved_at }}</td><td class="small">{{ r.covers }}</td><td class="small">{{ r.licence }}</td><td class="small">{{ r.personal_data }}</td></tr>{% endfor %}</table>
+<h1>Source registry</h1>
+<p class="lead">Every fact in this prototype points at one of these rows. Add a row before ingesting anything new.</p>
+
+{% set kind_order = ['Bulk download', 'News feed', 'Curated by hand'] %}
+{% for kind in kind_order %}
+{% set kind_rows = rows|selectattr('kind', 'equalto', kind)|list %}
+{% if kind_rows %}
+<h2 class="small muted" style="text-transform:uppercase;letter-spacing:.06em;margin:28px 0 12px">{{ kind }}</h2>
+{% for r in kind_rows %}
+<div class="dcard">
+  <h3>{{ r.name }}</h3>
+  <div class="pub">{{ r.publisher }}{% if r.url and r.url != 'n/a' %} · <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.url }}</a>{% endif %}</div>
+
+  <div class="stamps">
+    <div><div class="k">Source id</div><div class="v"><code>{{ r.source_id }}</code></div></div>
+    <div><div class="k">Retrieved</div><div class="v">{{ r.retrieved_at }}</div></div>
+    <div><div class="k">Covers</div><div class="v">{{ r.covers }}</div></div>
+    {% for n, label in r.counts %}
+    <div><div class="k">{{ label }}</div><div class="v">{{ "{:,}".format(n) }}</div></div>
+    {% endfor %}
+  </div>
+
+  <div class="pills">
+    <span class="pill">{{ r.licence }}</span>
+    {% if r.personal_data == 'none' %}
+    <span class="pill nopd">No personal data</span>
+    {% else %}
+    <span class="pill pd">Contains personal data</span>
+    {% endif %}
+  </div>
+
+  {% if r.personal_data != 'none' %}
+  <p class="small muted" style="margin-top:10px">{{ r.personal_data }}</p>
+  {% endif %}
+
+  {% if r.notes %}
+  <p class="small muted" style="margin-top:10px">{{ r.notes }}</p>
+  {% endif %}
+
+  <div class="citation">{{ r.publisher }}. {{ r.name }}.{% if r.url and r.url != 'n/a' %} {{ r.url }}.{% endif %} Retrieved {{ r.retrieved_at }}.</div>
+  <p class="small muted" style="margin:8px 0 0">Licence above is the licence on the raw source. Anything this project derives from it — matches, scores, drafts — is not covered by that licence and carries its own provenance chip.</p>
+</div>
+{% endfor %}
+{% endif %}
+{% endfor %}
 {% endblock %}
