@@ -1,13 +1,108 @@
-{% extends "base.html" %}{% from "_macros.html" import ev, claim %}{% block title %}FFRH team board{% endblock %}{% block body %}
-<h1>FFRH team board: who matches whom, right now</h1>
-<div class="banner"><b>Stand-in cohort.</b> These 12 organisations were picked by rule from the public register because the FFRH profiles have not been shared. Only public-register fields are shown; every consent-required field is withheld.</div>
-<p class="small muted">Scores rank the plausibility of a conversation, not the odds of a grant. Weights and evidence are on each CSO page.</p>
-<table><tr><th>CSO</th><th>State</th><th>Themes</th><th>Top funders (score)</th><th>Open calls that fit</th><th></th></tr>
-{% for b in board %}<tr><td><b>{{ b.cso.display_name }}</b> <span class="badge standin">stand-in</span></td><td>{{ states[b.cso.state_code] }}</td><td class="small">{% for t in b.cso.themes %}{{ theme_labels[t] }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-<td class="small">{% for m in b.top %}<a href="/funders/{{ m.cin }}">{{ m.name.title() }}</a> ({{ m.score }}){% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-<td class="small">{% for r in b.rfps %}<a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title[:60] }}</a>{% if r.deadline %} · due {{ r.deadline }}{% endif %}{% if not loop.last %}<br>{% endif %}{% else %}<span class="muted">none above threshold</span>{% endfor %}</td>
-<td><a class="btn secondary" href="/hub/cso/{{ b.cso.cso_id }}?step=3">Open</a></td></tr>{% endfor %}</table>
+{% extends "base.html" %}{% from "_macros.html" import ev %}{% block title %}Team board{% endblock %}
+{% block body %}
+{% set ns = namespace(strong=0) %}
+{% set live_calls = [] %}
+{% for b in board %}
+  {% if b.top and (b.top|selectattr('band','equalto','strong')|list) %}{% set ns.strong = ns.strong + 1 %}{% endif %}
+  {% for r in b.rfps %}{% if r.rfp_id not in live_calls %}{% set _ = live_calls.append(r.rfp_id) %}{% endif %}{% endfor %}
+{% endfor %}
+
+<div class="pagehead">
+  <div class="eyebrow">Hub team board</div>
+  <h1>Which organisation matches which funder</h1>
+  <p class="sub">All {{ board|length }} organisations in the current cohort, each ranked against every funder with recent North East spend, and against every open call on file. Open a card for the reasons and their sources.</p>
+</div>
+
+<div class="herostat">
+  <div><div class="figure">{{ board|length }}</div><div class="cap">organisations in the cohort</div></div>
+  <div><div class="figure">{{ ns.strong }}</div><div class="cap">have at least one strong funder match</div></div>
+  <div><div class="figure">{{ live_calls|length }}</div><div class="cap">open call{{ 's' if live_calls|length != 1 else '' }} live and matched to at least one organisation</div></div>
+</div>
+
+<div class="banner"><b>Stand-in cohort.</b> These 12 organisations were picked by rule from the public register because the FFRH profiles have not been shared yet. Only public-register fields are shown here; every consent-required field stays withheld until a person reviews it. <a href="/dpdp">Why</a>.</div>
+<p class="small muted" style="margin:10px 0 18px">A score ranks how plausible a conversation is, never the odds of a grant. It is not a prediction.</p>
+
+{% for b in board %}
+<details class="xcard">
+  <summary>
+    <span class="caret">▶</span>
+    <span class="who" style="flex:1;min-width:0">
+      <span class="xtitle">{{ b.cso.display_name }}{% if b.cso.is_stand_in %} <span class="badge standin">stand-in</span>{% endif %}</span>
+      <span class="xsub">{{ states[b.cso.state_code] }}{% if b.cso.districts %} · {{ b.cso.districts|join(', ') }}{% endif %}{% if b.cso.themes %} · {% for t in b.cso.themes %}{{ theme_labels.get(t, t) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</span>
+    </span>
+    {% if b.top %}
+    <span class="fit {{ b.top[0].band }}">
+      <span class="dots">{% for i in range(5) %}<i class="{% if i < b.top[0].band_dots %}f{% endif %}"></i>{% endfor %}</span>
+      <span class="lab">best: {{ b.top[0].band_label }}</span>
+    </span>
+    {% else %}
+    <span class="small muted">no matches yet</span>
+    {% endif %}
+    <span class="xnum">{{ b.rfps|length }}<span class="muted small"> call{{ 's' if b.rfps|length != 1 else '' }}</span></span>
+  </summary>
+  <div class="xbody">
+    <h3 style="margin-top:0">Top funder matches</h3>
+    {% if b.top %}
+    <div class="results">
+      {% for m in b.top %}
+      <div class="rescard">
+        <div class="who">
+          <div class="name"><a href="/funders/{{ m.cin }}">{{ m.name|title }}</a></div>
+          <div class="meta">₹{{ '%.2f'|format(m.ne_recent_cr) }} cr filed in the North East, FY22–24{% if m.median_project_lakh %} · typical project ≈ ₹{{ m.median_project_lakh }} lakh{% endif %}</div>
+          {% if m.reasons %}
+          <ul class="reasons small" style="margin-top:6px">
+            {% for r in m.reasons[:2] %}<li>{{ r.text }} {% for e in r.evidence %}{{ ev(e) }}{% endfor %}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+        <div class="metric">
+          <div class="fit {{ m.band }}"><span class="dots">{% for i in range(5) %}<i class="{% if i < m.band_dots %}f{% endif %}"></i>{% endfor %}</span><span class="lab">{{ m.band_label }}</span></div>
+          <div class="v" style="margin-top:6px">{{ m.score }}<span class="k">/{{ m.max_score }}</span></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="muted small">No funder matches computed for this profile yet.</p>{% endif %}
+
+    <h3>Open calls that fit</h3>
+    {% if b.rfps %}
+      {% for r in b.rfps %}
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start">
+          <div style="flex:1;min-width:0">
+            <div class="xtitle" style="font-size:14px"><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a></div>
+            <div class="xsub">{{ r.issuer }}{% if r.deadline %} · <b>closes {{ r.deadline }}</b>{% else %} · no deadline stated{% endif %} · page read {{ r.retrieved_at }}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="xnum">{{ r.score }}<span class="muted small">/100</span></div>
+            {% if not r.has_text %}<div class="badge withheld" style="margin-top:4px">link only</div>{% endif %}
+          </div>
+        </div>
+        {% if r.reasons %}
+        <ul class="reasons small" style="margin-top:8px">
+          {% for x in r.reasons %}<li>{{ x.text }} {% for e in x.evidence %}{{ ev(e) }}{% endfor %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}<p class="muted small">No open call above threshold yet.</p>{% endif %}
+
+    <p style="margin-bottom:0"><a class="btn secondary" href="/hub/cso/{{ b.cso.cso_id }}?step=3">Full workspace →</a></p>
+  </div>
+</details>
+{% endfor %}
+
 <h2>Add an open call (one public link)</h2>
-<form method="post" action="/hub/rfp" class="inline card"><div><label>URL</label><input type="url" name="url" required style="min-width:280px"></div><div><label>Title</label><input type="text" name="title" required></div><div><label>Issuer</label><input type="text" name="issuer"></div><div><label>Deadline (YYYY-MM-DD)</label><input type="text" name="deadline"></div><div><label>States (AS,ML,…)</label><input type="text" name="states"></div><div><label>Themes</label><input type="text" name="themes" value="livelihoods"></div><button>Fetch &amp; add</button></form>
 <p class="small muted">The public text of the page is fetched and stored with today's date. No bulk scraping of listing sites.</p>
+<form method="post" action="/hub/rfp" class="card">
+  <div class="grid g3">
+    <div><label>URL</label><input type="url" name="url" required style="width:100%"></div>
+    <div><label>Title</label><input type="text" name="title" required style="width:100%"></div>
+    <div><label>Issuer</label><input type="text" name="issuer" style="width:100%"></div>
+    <div><label>Deadline (YYYY-MM-DD)</label><input type="text" name="deadline" style="width:100%"></div>
+    <div><label>States (AS,ML,…)</label><input type="text" name="states" style="width:100%"></div>
+    <div><label>Themes</label><input type="text" name="themes" value="livelihoods" style="width:100%"></div>
+  </div>
+  <div style="margin-top:12px"><button>Fetch &amp; add</button></div>
+</form>
 {% endblock %}

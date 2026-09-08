@@ -111,6 +111,7 @@
 <div class="stepnav">
   <div class="dots">{% for x in findings %}<a href="/patterns?step={{ loop.index }}" class="{% if loop.index == step %}on{% endif %}" title="{{ x.kicker }}"></a>{% endfor %}</div>
   <span class="of">Finding {{ step }} of {{ findings|length }}</span>
+  {% if step < findings|length %}<a class="small muted" href="/patterns?step={{ findings|length }}">Skip to the conclusion</a>{% endif %}
 </div>
 
 <div class="grid g2" style="align-items:start">
@@ -121,7 +122,9 @@
     <p>{% for e in f.evidence %}{{ ev(e) }}{% endfor %}</p>
     {% if f.caveat %}<div class="banner"><b>Read it carefully.</b> {{ f.caveat }}</div>{% endif %}
   </div>
-  <div>{{ visual(f) }}</div>
+  <div>{{ visual(f) }}
+    {% for e in f.evidence %}<p class="srcline"><b>Source:</b> {{ e.source_name }} ({{ e.publisher }}), retrieved {{ e.retrieved_at }}.</p>{% endfor %}
+  </div>
 </div>
 
 <div class="findnav">
@@ -141,7 +144,9 @@
       <p>{% for e in f.evidence %}{{ ev(e) }}{% endfor %}</p>
       {% if f.caveat %}<p class="small muted">{{ f.caveat }}</p>{% endif %}
     </div>
-    <div>{{ visual(f) }}</div>
+    <div>{{ visual(f) }}
+      {% for e in f.evidence %}<p class="srcline"><b>Source:</b> {{ e.source_name }} ({{ e.publisher }}), retrieved {{ e.retrieved_at }}.</p>{% endfor %}
+    </div>
   </div>
 </div>
 {% endfor %}
@@ -164,5 +169,17 @@
 
 <h2>The region at a glance, FY2023-24</h2>
 {{ hexmap(hex_latest) }}
+{% endif %}
+{% if view == 'story' %}
+<script>
+/* Arrow keys advance the story, for driving it from a lectern. Pure enhancement:
+   every step is a real link and the page works with this script removed. */
+document.addEventListener('keydown', function (e) {
+  if (e.target.matches('input, textarea, select')) return;
+  var links = document.querySelectorAll('.findnav a');
+  if (e.key === 'ArrowRight' && links.length) { window.location = links[links.length - 1].href; }
+  if (e.key === 'ArrowLeft' && links.length > 1) { window.location = links[0].href; }
+});
+</script>
 {% endif %}
 {% endblock %}

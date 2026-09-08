@@ -322,7 +322,8 @@ def hub_advisory(request: Request, state: str | None = None, persona=Depends(sur
     _log(con, request)
     return render(request, "hub_advisory.html", con, landscape=fq.landscape(con), shifts=narrative.funder_priority_shifts(con),
                   feed=narrative.feed(con, limit=40, state_code=state or None), state=state or "",
-                  cohort=_cohort(con), patterns=subareas.attractiveness(con))
+                  cohort=_cohort(con), patterns=subareas.attractiveness(con),
+                  hexmap=hexmap.build(con, fy=fq.LATEST_FY), findings=findings.build(con))
 
 
 @app.get("/hub/cso", response_class=HTMLResponse)

@@ -299,3 +299,25 @@ svg.hexmap text.val{font:600 9.5px ui-monospace,Menlo,monospace;text-anchor:midd
   .apisplit .rt{position:static}
   .pgrid{grid-template-columns:1fr}
 }
+
+/* ---------- always-visible source line under a visual ----------
+   Pew and Our World in Data both keep the source in the reader's eye rather than behind an icon.
+   The expandable evidence chip stays for the full provenance; this line survives a printout. */
+.srcline{font-size:11px;color:var(--muted);letter-spacing:.03em;margin:9px 0 0;line-height:1.5}
+.srcline b{color:var(--ink-soft);font-weight:600}
+
+/* ---------- print ----------
+   The full view is meant to be printable: it is the fallback when JavaScript is off, when the
+   projector misbehaves, and when someone wants the analysis on paper at the convening. */
+@media print{
+  nav.side,.stepnav,.findnav,.steps,.tabbar,form,button,.btn{display:none!important}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:none}
+  body{background:#fff;font-size:11pt}
+  .card,.dcard,details.xcard{border-color:#ccc;box-shadow:none;break-inside:avoid}
+  details.ev{display:none}           /* chips cannot be opened on paper; .srcline carries the source */
+  details.xcard>.xbody{display:block!important}
+  a{color:inherit;border:0}
+  .finding,.psec{max-width:none}
+  footer.fresh{border-top:1px solid #ccc}
+}
