@@ -11,12 +11,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from . import apidocs, privacy
 from .config import HUB_TOKEN, NE_STATES, DRAFT_MODEL
 from .db import connect, init_schema
 from .ingest import news as news_ingest, rfps as rfp_ingest
 from .ingest.themes import THEME_LABELS, SUBAREA_LABELS, LIVELIHOOD_FAMILY
 from .protected import drafting
-from .query import funders as fq, matching, narrative, rfp_match, subareas
+from .query import findings, funders as fq, hexmap, matching, narrative, rfp_match, subareas
 
 WEB = Path(__file__).parent / "web"
 app = FastAPI(title="FFRH open data + query API", version="0.1.0",
@@ -56,37 +57,93 @@ def home(request: Request, con=Depends(db)):
     return render(request, "index.html", con, national=nat[-3:], counts=counts)
 
 
+PAGE_SIZE = 40
+
+
 @app.get("/funders", response_class=HTMLResponse)
-def funders_page(request: Request, q: str | None = None, state: str | None = None, theme: str | None = None, con=Depends(db)):
-    rows = fq.list_funders(con, q=q, state_code=state, theme=theme, limit=100)
-    return render(request, "funders.html", con, rows=rows, q=q or "", state=state or "", theme=theme or "")
+def funders_page(request: Request, q: str | None = None, state: str | None = None, theme: str | None = None,
+                 amount: str | None = None, sort: str = "recent", page: int = 1, con=Depends(db)):
+    page = max(1, page)
+    rows = fq.list_funders(con, q=q, state_code=state, theme=theme, amount=amount, sort=sort,
+                           limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE)
+    total = fq.count_funders(con, q=q, state_code=state, theme=theme, amount=amount)
+    active = [("q", q, f'name contains "{q}"'), ("state", state, STATE_NAMES.get(state or "", "")),
+              ("theme", theme, THEME_LABELS.get(theme or "", "")),
+              ("amount", amount if amount and amount != "any" else None, fq.AMOUNT_BUCKETS.get(amount or "any")[2])]
+    return render(request, "funders.html", con, rows=rows, total=total, page=page, page_size=PAGE_SIZE,
+                  pages=max(1, -(-total // PAGE_SIZE)), q=q or "", state=state or "", theme=theme or "",
+                  amount=amount or "any", sort=sort, buckets=fq.AMOUNT_BUCKETS, sorts=fq.SORTS,
+                  active=[(k, v, lab) for k, v, lab in active if v])
+
+
+FUNDER_TABS = [("overview", "Overview"), ("trends", "Over time"), ("top", "Top 5"), ("projects", "Project lines")]
 
 
 @app.get("/funders/{cin}", response_class=HTMLResponse)
-def funder_page(request: Request, cin: str, con=Depends(db)):
+def funder_page(request: Request, cin: str, tab: str = "overview", con=Depends(db)):
     p = fq.profile(con, cin)
     if not p:
         raise HTTPException(404)
+    if tab not in dict(FUNDER_TABS):
+        tab = "overview"
     sig = [dict(r) for r in con.execute("SELECT title,url,published_at,retrieved_at,signal_type FROM narrative_items WHERE funder_cins LIKE ? ORDER BY published_at DESC LIMIT 10", (f'%"{cin}"%',))]
-    return render(request, "funder.html", con, p=p, signals=sig)
+    return render(request, "funder.html", con, p=p, signals=sig, tab=tab, tabs=FUNDER_TABS)
 
 
 @app.get("/patterns", response_class=HTMLResponse)
-def patterns_page(request: Request, state: str | None = None, con=Depends(db)):
+def patterns_page(request: Request, state: str | None = None, step: int | None = None, view: str = "story",
+                  con=Depends(db)):
+    """The analysis, as a sequence of findings (default) or as the full page of tables (view=all).
+
+    The stepped view is the one to demo. The 'all' view is the same numbers with nothing hidden, so the
+    page still works with JavaScript off, on a printout, or for someone who just wants the tables.
+    """
+    fs = findings.build(con)
+    step = max(1, min(len(fs), step or 1))
     return render(request, "patterns.html", con, data=subareas.attractiveness(con, state or None), state=state or "",
-                  landscape=fq.landscape(con))
+                  landscape=fq.landscape(con), findings=fs, step=step, view=view,
+                  hex_latest=hexmap.build(con, fy=fq.LATEST_FY), theme_labels_all=THEME_LABELS)
+
+
+SOURCE_RECORD_COUNTS = {
+    "mca_csr_portal_2014_24": [("csr_projects", "project lines"), ("funders", "companies")],
+    "ngo_darpan_grants_2025_01": [("ngos", "organisations"), ("ngo_grants", "grant rows")],
+    "ffrh_stand_in_cohort": [("cso_profiles", "stand-in profiles")],
+    "curated_rfp": [("rfps", "open calls")],
+}
 
 
 @app.get("/sources", response_class=HTMLResponse)
 def sources_page(request: Request, con=Depends(db)):
-    rows = [dict(r) for r in con.execute("SELECT * FROM sources ORDER BY retrieved_at DESC")]
+    rows = []
+    for r in con.execute("SELECT * FROM sources ORDER BY retrieved_at DESC"):
+        d = dict(r)
+        counts = []
+        for table, label in SOURCE_RECORD_COUNTS.get(d["source_id"], []):
+            col = "source_id" if table not in ("cso_profiles",) else None
+            n = (con.execute(f"SELECT COUNT(*) FROM {table} WHERE source_id=?", (d["source_id"],)).fetchone()[0]
+                 if col else con.execute(f"SELECT COUNT(*) FROM {table} WHERE is_stand_in=1").fetchone()[0])
+            counts.append((n, label))
+        if d["source_id"].startswith("feed_") or d["source_id"] == "manual_logged_signal":
+            counts.append((con.execute("SELECT COUNT(*) FROM narrative_items WHERE source_id=?", (d["source_id"],)).fetchone()[0], "items"))
+        d["counts"] = counts
+        d["kind"] = ("Bulk download" if d["source_id"] in ("mca_csr_portal_2014_24", "ngo_darpan_grants_2025_01")
+                     else "News feed" if d["source_id"].startswith("feed_")
+                     else "Curated by hand")
+        rows.append(d)
     return render(request, "sources.html", con, rows=rows)
 
 
 @app.get("/dpdp", response_class=HTMLResponse)
 def dpdp_page(request: Request, con=Depends(db)):
-    notes = (Path(__file__).parent.parent / "DPDP_NOTES.md").read_text() if (Path(__file__).parent.parent / "DPDP_NOTES.md").exists() else "DPDP_NOTES.md missing"
-    return render(request, "dpdp.html", con, notes=notes)
+    return render(request, "dpdp.html", con, headline=privacy.HEADLINE, standfirst=privacy.STANDFIRST,
+                  sections=privacy.SECTIONS, enforcement=privacy.ENFORCEMENT)
+
+
+@app.get("/api-docs", response_class=HTMLResponse)
+def api_docs_page(request: Request, endpoint: str | None = None, con=Depends(db)):
+    return render(request, "apidocs.html", con, intro=apidocs.INTRO, endpoints=apidocs.ENDPOINTS,
+                  recipes=apidocs.RECIPES, selected=endpoint)
 
 
 # ------------------------------------------------------------------ open JSON API

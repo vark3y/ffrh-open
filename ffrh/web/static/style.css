@@ -140,3 +140,162 @@ footer.fresh{margin-top:56px;border-top:1px solid var(--line);padding-top:12px;f
   .g2,.g3,.g4{grid-template-columns:1fr}
   main{padding:22px}
 }
+
+/* ==================================================================
+   Design-system components added for the page rebuilds.
+   Bases: USAspending recipient profile, ProPublica Nonprofit Explorer,
+   catalog.data.gov dataset cards, Apple privacy, Resend + USAspending API docs,
+   Our World in Data grapher toolbar, Pudding-style stepped narrative.
+   Existing classes above are unchanged; these are additive.
+   ================================================================== */
+
+/* ---------- page header: hero number owns the page (USAspending) ---------- */
+.pagehead{margin-bottom:22px}
+.pagehead .eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+.pagehead h1{margin-bottom:6px}
+.pagehead .sub{color:var(--muted);font-size:13.5px}
+.herostat{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-end;margin:20px 0 6px}
+.herostat .figure{font-family:"Iowan Old Style",Georgia,serif;font-size:44px;line-height:1;color:#15130e;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.herostat .figure.sm{font-size:30px}
+.herostat .cap{font-size:12.5px;color:var(--muted);margin-top:7px;max-width:280px;line-height:1.45}
+.herostat .unit{font-size:20px;color:var(--muted);font-family:inherit;margin-left:2px}
+
+/* ---------- sticky sub-nav tabs (USAspending profile) ---------- */
+.tabbar{display:flex;gap:2px;border-bottom:1.5px solid var(--line);margin:22px 0 24px;position:sticky;top:0;background:var(--paper);z-index:5;overflow-x:auto}
+.tabbar a{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--muted);text-decoration:none;border:0;border-bottom:2.5px solid transparent;white-space:nowrap;margin-bottom:-1.5px}
+.tabbar a:hover{color:var(--ink)}
+.tabbar a.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------- trust row (Charity Navigator) ---------- */
+.trustrow{display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0 4px;font-size:12.5px;color:var(--ink-soft)}
+.trustrow span.t{display:inline-flex;align-items:center;gap:5px}
+.trustrow span.t::before{content:"✓";color:var(--ok);font-weight:700}
+.trustrow span.t.no::before{content:"○";color:var(--muted);font-weight:700}
+
+/* ---------- result cards (ProPublica search) ---------- */
+.results{display:flex;flex-direction:column;gap:0;margin-top:4px}
+.rescard{border-bottom:1px solid var(--line-soft);padding:15px 2px;display:flex;gap:18px;align-items:baseline;justify-content:space-between}
+.rescard:hover{background:#fbf8f1}
+.rescard .who{min-width:0;flex:1}
+.rescard .name{font-size:16px;font-weight:600;color:var(--accent);letter-spacing:-.005em}
+.rescard .name a{border:0}
+.rescard .meta{font-size:12.5px;color:var(--muted);margin-top:3px}
+.rescard .metric{text-align:right;white-space:nowrap}
+.rescard .metric .v{font-family:"Iowan Old Style",Georgia,serif;font-size:19px;color:#15130e;font-variant-numeric:tabular-nums}
+.rescard .metric .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+
+/* ---------- filter rail (MacArthur grant search) ---------- */
+.withrail{display:grid;grid-template-columns:230px 1fr;gap:30px;align-items:start}
+.rail{position:sticky;top:14px}
+.rail .grp{margin-bottom:18px}
+.rail .grp>label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.rail select,.rail input[type=text]{width:100%;min-width:0}
+.rail .opt{display:block;font-size:13.5px;color:var(--ink-soft);padding:3px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 14px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent-dark);border:1px solid var(--accent-line);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+.chip a{color:inherit;border:0;opacity:.65;font-weight:700}
+.chip a:hover{opacity:1}
+.chips .clear{font-size:12px;color:var(--muted);border-bottom:1px solid currentColor}
+.resultcount{font-size:13px;color:var(--muted);margin:2px 0 6px}
+
+/* ---------- expandable card (funders to target, exhaustive list) ---------- */
+details.xcard{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);margin-bottom:8px;box-shadow:var(--shadow-sm);overflow:hidden}
+details.xcard>summary{cursor:pointer;list-style:none;padding:13px 16px;display:flex;gap:16px;align-items:center;justify-content:space-between}
+details.xcard>summary::-webkit-details-marker{display:none}
+details.xcard>summary:hover{background:#fbf8f1}
+details.xcard[open]>summary{border-bottom:1px solid var(--line-soft);background:#fbf8f1}
+details.xcard>summary .caret{color:var(--muted);font-size:11px;transition:transform .15s}
+details.xcard[open]>summary .caret{transform:rotate(90deg)}
+details.xcard .xbody{padding:14px 16px 16px}
+.xtitle{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.005em}
+.xsub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.xnum{font-family:"Iowan Old Style",Georgia,serif;font-size:19px;color:#15130e;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* fit rating: a labelled band, not a credit score */
+.fit{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.fit .dots{display:inline-flex;gap:2.5px}
+.fit .dots i{width:7px;height:7px;border-radius:50%;background:#ddd5c2;display:block}
+.fit .dots i.f{background:var(--accent)}
+.fit .lab{font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.fit.strong .lab{color:var(--ok)}.fit.strong .dots i.f{background:var(--ok)}
+.fit.worth .lab{color:var(--accent)}
+.fit.weak .lab{color:var(--muted)}
+
+/* ---------- dataset card (catalog.data.gov + OWID) ---------- */
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.dcard h3{margin:0 0 3px;font-size:16.5px}
+.dcard .pub{font-size:13px;color:var(--muted);margin-bottom:10px}
+.dcard .stamps{display:flex;flex-wrap:wrap;gap:20px;margin:12px 0;padding:11px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+.dcard .stamps div{font-size:12.5px}
+.dcard .stamps .k{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px}
+.dcard .stamps .v{font-variant-numeric:tabular-nums;color:var(--ink)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pill{display:inline-block;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:700;background:var(--paper2);color:var(--ink-soft);border:1px solid var(--line)}
+.pill.pd{background:var(--red-bg);color:var(--red);border-color:var(--red-line)}
+.pill.nopd{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.citation{background:var(--paper2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink-soft);margin-top:10px;white-space:pre-wrap;word-break:break-word}
+
+/* ---------- privacy sections (Apple) ---------- */
+.psec{max-width:760px;margin:0 auto 54px}
+.psec.wide{max-width:980px}
+.psec .ptag{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.psec h2{font-size:27px;margin:0 0 12px;line-height:1.25}
+.psec p{font-size:16px;line-height:1.65;color:var(--ink-soft);margin:0 0 14px}
+.psec .big{font-size:19px;line-height:1.55;color:var(--ink)}
+.prule{border:0;border-top:1px solid var(--line);margin:0 0 54px}
+.pgrid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));margin:18px 0}
+.pitem{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;box-shadow:var(--shadow-sm)}
+.pitem h4{margin:0 0 5px;font-size:14px;font-family:inherit;font-weight:700}
+.pitem p{font-size:13px;margin:0;line-height:1.55}
+
+/* ---------- API docs (Resend two-column + USAspending index table) ---------- */
+.apisplit{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start;margin:14px 0 34px}
+.apisplit .rt{position:sticky;top:14px}
+pre.code{background:#1f2233;color:#e7e9f5;border-radius:10px;padding:14px 16px;overflow-x:auto;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin:0}
+pre.code .c{color:#8b93b8}
+pre.code .s{color:#a5d6a7}
+pre.code .k{color:#9fb4ff}
+.codehead{display:flex;justify-content:space-between;align-items:center;background:#171a29;color:#c9cee8;border-radius:10px 10px 0 0;padding:7px 14px;font:11.5px ui-monospace,Menlo,monospace;letter-spacing:.03em}
+.codehead+pre.code{border-radius:0 0 10px 10px}
+.method{display:inline-block;font:11px/1.6 ui-monospace,Menlo,monospace;font-weight:700;padding:1px 7px;border-radius:4px;letter-spacing:.04em}
+.method.get{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+.method.post{background:var(--accent-soft);color:var(--accent-dark);border:1px solid var(--accent-line)}
+table.endpoints td code{background:transparent;padding:0;font-size:12.5px;color:var(--accent-dark)}
+.param{border-top:1px solid var(--line-soft);padding:11px 0}
+.param .pn{font:12.5px ui-monospace,Menlo,monospace;font-weight:600;color:var(--ink)}
+.param .pt{font-size:11.5px;color:var(--muted);margin-left:7px}
+.param .req{font-size:10.5px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:7px}
+.param p{margin:4px 0 0;font-size:13px;color:var(--ink-soft)}
+
+/* ---------- hex cartogram ---------- */
+.hexwrap{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+svg.hexmap{overflow:visible}
+svg.hexmap polygon{stroke:var(--paper);stroke-width:2.5;transition:opacity .12s}
+svg.hexmap a:hover polygon,svg.hexmap g.hx:hover polygon{opacity:.78}
+svg.hexmap text.abbr{font:700 13px -apple-system,"Segoe UI",Inter,sans-serif;text-anchor:middle;pointer-events:none}
+svg.hexmap text.val{font:600 9.5px ui-monospace,Menlo,monospace;text-anchor:middle;pointer-events:none}
+.hexlegend{font-size:12px;color:var(--muted)}
+.hexlegend .scale{display:flex;height:10px;border-radius:3px;overflow:hidden;margin:5px 0 4px;width:190px}
+.hexlegend .scale i{flex:1}
+.hexlegend .ends{display:flex;justify-content:space-between;width:190px;font-variant-numeric:tabular-nums}
+
+/* ---------- stepped narrative (Pudding) ---------- */
+.stepnav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 20px}
+.stepnav .dots{display:flex;gap:5px}
+.stepnav .dots a{width:9px;height:9px;border-radius:50%;background:#ddd5c2;border:0;display:block}
+.stepnav .dots a.on{background:var(--accent);transform:scale(1.25)}
+.stepnav .dots a:hover{background:var(--accent-line)}
+.stepnav .of{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.finding{max-width:780px}
+.finding .fnum{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.finding h2{font-size:26px;margin:6px 0 12px;line-height:1.3}
+.finding .say{font-size:16.5px;line-height:1.6;color:var(--ink-soft);margin:0 0 16px}
+.findnav{display:flex;justify-content:space-between;gap:12px;margin-top:30px;padding-top:16px;border-top:1px solid var(--line)}
+
+@media(max-width:980px){
+  .withrail{grid-template-columns:1fr}
+  .rail{position:static}
+  .apisplit{grid-template-columns:1fr}
+  .apisplit .rt{position:static}
+  .pgrid{grid-template-columns:1fr}
+}

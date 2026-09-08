@@ -5,7 +5,7 @@
  <a class="brand" href="/">FFRH intelligence</a><div class="tag">North East India · open prototype</div>
  {% if persona %}<div class="persona-row"><span class="persona">{{ personas[persona] }}</span> <a class="small" href="/hub/leave">leave</a></div>{% endif %}
  <h4>Open layer</h4>
- <a class="item" href="/funders">Funders</a><a class="item" href="/patterns">Patterns &amp; landscape</a><a class="item" href="/sources">Sources</a><a class="item" href="/docs" target="_blank">API docs</a><a class="item" href="/dpdp">Data protection</a>
+ <a class="item" href="/funders">Funders</a><a class="item" href="/patterns">Patterns &amp; landscape</a><a class="item" href="/sources">Sources</a><a class="item" href="/api-docs">API docs</a><a class="item" href="/dpdp">Data protection</a>
  <h4>Protected layer{% if persona %} · viewing as{% endif %}</h4>
  {% set path = request.url.path %}
  {% set here = 'team' if path.startswith('/hub/team') else ('advisory' if path.startswith('/hub/advisory') else ('cso' if path.startswith('/hub/cso') else none)) %}

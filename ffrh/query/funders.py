@@ -15,8 +15,25 @@ def _rows_locator(**kw) -> str:
     return "csr_projects where " + ", ".join(f"{k}={v}" for k, v in kw.items() if v is not None)
 
 
-def list_funders(con: sqlite3.Connection, q: str | None = None, state_code: str | None = None,
-                 theme: str | None = None, limit: int = 50, offset: int = 0) -> list[dict]:
+# Amount buckets for the directory filter rail, in ₹ crore of FY22-24 North East spend.
+# Bucketed rather than a free slider because the distribution is extremely skewed.
+AMOUNT_BUCKETS = {
+    "any": (None, None, "Any amount"),
+    "under1": (None, 1.0, "Under ₹1 crore"),
+    "1to10": (1.0, 10.0, "₹1 to 10 crore"),
+    "10to50": (10.0, 50.0, "₹10 to 50 crore"),
+    "over50": (50.0, None, "Over ₹50 crore"),
+}
+SORTS = {
+    "recent": ("ne_spent_cr_recent DESC, ne_spent_cr_all DESC", "Recent spend, high to low"),
+    "all": ("ne_spent_cr_all DESC", "All-years spend, high to low"),
+    "projects": ("projects DESC", "Most project lines"),
+    "states": ("states DESC, ne_spent_cr_recent DESC", "Most North East states covered"),
+    "name": ("f.name ASC", "Name, A to Z"),
+}
+
+
+def _list_where(q, state_code, theme):
     where, args = ["1=1"], []
     if q:
         where.append("f.name LIKE ?"); args.append(f"%{q}%")
@@ -24,16 +41,49 @@ def list_funders(con: sqlite3.Connection, q: str | None = None, state_code: str 
         where.append("p.state_code=?"); args.append(state_code)
     if theme:
         where.append("p.theme=?"); args.append(theme)
+    return " AND ".join(where), args
+
+
+def _having(amount: str | None):
+    """Amount buckets filter the FY22-24 total, which is the number the directory ranks on."""
+    lo, hi, _ = AMOUNT_BUCKETS.get(amount or "any", AMOUNT_BUCKETS["any"])
+    clauses, args = [], []
+    if lo is not None:
+        clauses.append("ne_spent_cr_recent >= ?"); args.append(lo)
+    if hi is not None:
+        clauses.append("ne_spent_cr_recent < ?"); args.append(hi)
+    return (" HAVING " + " AND ".join(clauses)) if clauses else "", args
+
+
+def list_funders(con: sqlite3.Connection, q: str | None = None, state_code: str | None = None,
+                 theme: str | None = None, limit: int = 50, offset: int = 0,
+                 amount: str | None = None, sort: str = "recent") -> list[dict]:
+    where, args = _list_where(q, state_code, theme)
+    having, hargs = _having(amount)
+    order = SORTS.get(sort, SORTS["recent"])[0]
     rows = con.execute(f"""
         SELECT f.cin, f.name, f.is_ne_registered,
                ROUND(SUM(p.spent_cr),2) AS ne_spent_cr_all,
                ROUND(SUM(CASE WHEN p.fy IN ('2021-22','2022-23','2023-24') THEN p.spent_cr ELSE 0 END),2) AS ne_spent_cr_recent,
-               COUNT(*) AS projects, COUNT(DISTINCT p.state_code) AS states, MAX(p.fy) AS last_fy
+               COUNT(*) AS projects, COUNT(DISTINCT p.state_code) AS states, MAX(p.fy) AS last_fy,
+               GROUP_CONCAT(DISTINCT p.state_code) AS state_codes
         FROM funders f JOIN csr_projects p ON p.cin=f.cin
-        WHERE {' AND '.join(where)}
-        GROUP BY f.cin ORDER BY ne_spent_cr_recent DESC, ne_spent_cr_all DESC LIMIT ? OFFSET ?""",
-        (*args, limit, offset)).fetchall()
+        WHERE {where}
+        GROUP BY f.cin{having} ORDER BY {order} LIMIT ? OFFSET ?""",
+        (*args, *hargs, limit, offset)).fetchall()
     return [dict(r) for r in rows]
+
+
+def count_funders(con: sqlite3.Connection, q: str | None = None, state_code: str | None = None,
+                  theme: str | None = None, amount: str | None = None) -> int:
+    """Total matching the filters, so the directory can show an honest result count."""
+    where, args = _list_where(q, state_code, theme)
+    having, hargs = _having(amount)
+    return con.execute(f"""
+        SELECT COUNT(*) FROM (
+          SELECT f.cin, SUM(CASE WHEN p.fy IN ('2021-22','2022-23','2023-24') THEN p.spent_cr ELSE 0 END) AS ne_spent_cr_recent
+          FROM funders f JOIN csr_projects p ON p.cin=f.cin WHERE {where} GROUP BY f.cin{having})""",
+        (*args, *hargs)).fetchone()[0]
 
 
 def profile(con: sqlite3.Connection, cin: str) -> dict | None:
