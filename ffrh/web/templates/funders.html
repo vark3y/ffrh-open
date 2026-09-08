@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Funders{% endblock %}{% block body %}
+<h1>Funders with filed CSR spend in the North East</h1>
+<form class="inline" method="get"><div><label>Name</label><input type="text" name="q" value="{{ q }}"></div>
+<div><label>State</label><select name="state"><option value="">any</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+<div><label>Theme</label><select name="theme"><option value="">any</option>{% for k,v in theme_labels.items() %}<option value="{{ k }}" {% if theme==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+<button>Filter</button></form>
+<p class="small muted">Sorted by FY2021-22 to FY2023-24 spend in the NE. Source: National CSR Portal, retrieved 2026-05-07.</p>
+<table><tr><th>Company</th><th class="num">NE ₹ cr FY22–24</th><th class="num">NE ₹ cr all years</th><th class="num">Lines</th><th class="num">States</th><th>Last FY</th></tr>
+{% for r in rows %}<tr><td><a href="/funders/{{ r.cin }}">{{ r.name }}</a>{% if r.is_ne_registered %} <span class="badge public">NE-registered</span>{% endif %}</td>
+<td class="num">{{ '%.2f'|format(r.ne_spent_cr_recent) }}</td><td class="num">{{ '%.2f'|format(r.ne_spent_cr_all) }}</td><td class="num">{{ r.projects }}</td><td class="num">{{ r.states }}</td><td>{{ r.last_fy }}</td></tr>{% endfor %}</table>
+{% endblock %}

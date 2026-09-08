@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% from "_macros.html" import ev, claim, bar %}{% block title %}{{ c.display_name }}{% endblock %}{% block body %}
+<h1>{{ c.display_name }} <span class="badge standin">stand-in</span></h1>
+<div class="steps">{% for i, t in [(1,'1 · Your profile'),(2,'2 · What funders back'),(3,'3 · Funders to target'),(4,'4 · Open calls'),(5,'5 · First draft')] %}<a href="/hub/cso/{{ c.cso_id }}?step={{ i }}" class="{% if i==step %}on{% elif i<step %}done{% endif %}">{{ t }}</a>{% endfor %}</div>
+
+{% if step == 1 %}
+<h2>Confirm your profile</h2>
+<div class="grid g2"><div class="card"><h3>From the public register</h3>
+{% for f, m in c.fields.items() if m.visibility == 'public' %}<div class="fact"><b>{{ f.replace('_',' ')|capitalize }}</b>: {% if f == 'grant_history' %}{{ m.value|length }} grant rows with a theme (latest: {{ m.value[0].field_of_work[:90] if m.value else '—' }}){% else %}{{ m.value }}{% endif %} <span class="badge public">public</span> {{ ev({'source_id': m.source_id, 'source_name': 'NGO Darpan', 'publisher': 'NITI Aayog', 'url': 'https://ngodarpan.gov.in/', 'retrieved_at': m.retrieved_at, 'locator': 'ngos / ngo_grants', 'value': '', 'source_rows': []}) }}</div>{% endfor %}
+</div><div class="card"><h3>Withheld until consent is reviewed</h3>
+{% for f, m in c.fields.items() if m.visibility != 'public' %}<div class="fact"><b>{{ f.replace('_',' ')|capitalize }}</b>: <span class="badge withheld">withheld</span> <span class="small muted">{{ m.consent_basis }}</span></div>{% endfor %}
+<p class="small muted">These never enter the draft or the open API until a consent basis is recorded (<a href="/dpdp">why</a>).</p></div></div>
+<form method="post" action="/hub/cso/{{ c.cso_id }}/profile" class="card" style="margin-top:16px"><h3>Tell us what you work on (your own words, used only for matching)</h3>
+<div><label>Themes</label>{% for k,v in theme_labels.items() if k in ['livelihoods','women','education','health','environment','rural_development','poverty_nutrition','wash','disaster'] %}<span class="check"><input type="checkbox" name="themes" value="{{ k }}" {% if k in c.themes %}checked{% endif %}>{{ v }}</span>{% endfor %}</div>
+<div style="margin-top:8px"><label>Livelihood sub-areas</label>{% for k,v in sub_labels.items() %}{% set sid = k.split('.',1)[1] %}<span class="check"><input type="checkbox" name="subareas" value="{{ sid }}" {% if sid in c.subareas %}checked{% endif %}>{{ v }}</span>{% endfor %}</div>
+<div class="grid g3" style="margin-top:8px"><div><label>Districts you work in (comma separated)</label><input type="text" name="districts" value="{{ c.districts|join(', ') }}" style="width:100%"></div><div><label>Typical ask, min ₹ lakh</label><input type="number" name="ask_min_lakh" value="{{ c.ask_min_lakh or '' }}"></div><div><label>max ₹ lakh</label><input type="number" name="ask_max_lakh" value="{{ c.ask_max_lakh or '' }}"></div></div>
+<div style="margin-top:8px"><label>Your strongest programme, in three sentences (this is your statement; it is cited as such)</label><textarea name="programme_summary">{{ c.programme_summary or '' }}</textarea></div>
+<div style="margin-top:10px"><button>Save and continue →</button></div></form>
+
+{% elif step == 2 %}
+<h2>What funders have actually backed in {{ states[c.state_code] }}</h2>
+<p class="small muted">{{ patterns.method }}</p>
+{% set mx = patterns.subareas|map(attribute='recent_cr')|max if patterns.subareas else 1 %}
+{% for d in patterns.subareas %}<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><b>{{ d.label }}{% if d.subarea in c.subareas %} <span class="badge public">you</span>{% endif %}</b><span class="small">₹{{ d.recent_cr }} cr · {{ d.recent_funders }} funders {{ ev(d.evidence) }}</span></div>{{ bar(d.recent_cr, mx, 'amber') }}<div class="small muted">e.g. {% for e in d.examples[:2] %}“{{ e.project_name }}” (FY{{ e.fy }}){% if not loop.last %}; {% endif %}{% endfor %}</div></div>{% else %}<p class="muted">No classified livelihood lines in this state in FY22–24.</p>{% endfor %}
+<h3>Across all eight states</h3>{% set mx = patterns_all.subareas|map(attribute='recent_cr')|max %}{% for d in patterns_all.subareas %}<div class="small">{{ d.label }} · ₹{{ d.recent_cr }} cr · {{ d.recent_funders }} funders</div>{{ bar(d.recent_cr, mx) }}{% endfor %}
+<p style="margin-top:14px"><a class="btn" href="/hub/cso/{{ c.cso_id }}?step=3">See funders to target →</a></p>
+
+{% elif step == 3 %}
+<h2>Funders worth a conversation</h2>
+<p class="small muted">{{ matches.method }} {{ matches.candidates }} funders were scored.</p>
+{% for m in matches.matches %}<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><div><span class="score">{{ m.score }}</span><span class="muted small">/{{ m.max_score }}</span> &nbsp; <a href="/funders/{{ m.cin }}"><b>{{ m.name.title() }}</b></a></div><div class="small muted">NE ₹{{ '%.2f'|format(m.ne_recent_cr) }} cr FY22–24{% if m.median_project_lakh %} · typical line ≈ ₹{{ m.median_project_lakh }} lakh{% endif %}{% if m.scale_fit %} · {{ m.scale_fit }}{% endif %}</div></div>
+<ul class="reasons small">{% for r in m.reasons %}<li>{{ r.text }} {% for e in r.evidence %}{{ ev(e) }}{% endfor %}</li>{% endfor %}</ul></div>{% endfor %}
+<p><a class="btn" href="/hub/cso/{{ c.cso_id }}?step=4">Open calls that fit →</a></p>
+
+{% elif step == 4 %}
+<h2>Open calls matched to you</h2>
+{% for r in rfps.rfps %}<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:12px"><div><span class="score">{{ r.score }}</span> &nbsp; <a href="{{ r.url }}" target="_blank" rel="noopener"><b>{{ r.title }}</b></a><div class="small muted">{{ r.issuer }}{% if r.deadline %} · deadline {{ r.deadline }}{% endif %} · page retrieved {{ r.retrieved_at }}</div></div></div>
+<ul class="reasons small">{% for x in r.reasons %}<li>{{ x.text }} {% for e in x.evidence %}{{ ev(e) }}{% endfor %}</li>{% endfor %}</ul></div>{% endfor %}
+<p><a class="btn" href="/hub/cso/{{ c.cso_id }}?step=5">Draft a first pass →</a></p>
+
+{% elif step == 5 %}
+<h2>A first draft, about 80% there, that you finish</h2>
+<p class="small">The draft only ever says what the evidence pack says, with a footnote on every claim. Anything else becomes a question for you. Paragraphs that cannot be traced to a source are dropped and listed, not hidden.</p>
+<form method="post" action="/hub/cso/{{ c.cso_id }}/draft" class="card inline">
+<div><label>Funder to write for (optional)</label><select name="funder_cin"><option value="">— none —</option>{% for m in matches.matches %}<option value="{{ m.cin }}">{{ m.name.title() }} ({{ m.score }})</option>{% endfor %}</select></div>
+<div><label>Open call (optional)</label><select name="rfp_id"><option value="">— none —</option>{% for r in rfps.rfps %}<option value="{{ r.rfp_id }}">{{ r.title[:70] }}</option>{% endfor %}</select></div>
+<div><span class="check"><input type="checkbox" name="use_model" value="1" checked> use the model ({{ model_name }}); falls back to evidence-only if no credentials</span></div>
+<button>Generate</button></form>
+{% if drafts %}<h3>Previous drafts</h3><ul>{% for d in drafts %}<li><a href="/hub/draft/{{ d.draft_id }}">Draft #{{ d.draft_id }}</a> <span class="small muted">{{ d.created_at }} · <span class="badge mode">{{ d.mode }}</span></span></li>{% endfor %}</ul>{% endif %}
+{% endif %}
+{% endblock %}

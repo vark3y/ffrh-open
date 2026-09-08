@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block title %}Sources{% endblock %}{% block body %}
+<h1>Source registry</h1><p class="lead">Every fact in this prototype points at one of these rows. Add a row before ingesting anything new.</p>
+<table><tr><th>Id</th><th>Name</th><th>Publisher</th><th>Retrieved</th><th>Covers</th><th>Licence</th><th>Personal data</th></tr>
+{% for r in rows %}<tr><td><code>{{ r.source_id }}</code></td><td>{{ r.name }}<div class="small muted">{{ r.notes }}</div></td><td>{{ r.publisher }}<div class="small"><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.url }}</a></div></td><td>{{ r.retrieved_at }}</td><td class="small">{{ r.covers }}</td><td class="small">{{ r.licence }}</td><td class="small">{{ r.personal_data }}</td></tr>{% endfor %}</table>
+{% endblock %}

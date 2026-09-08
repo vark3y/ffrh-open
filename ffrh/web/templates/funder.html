@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% from "_macros.html" import ev, claim, bar %}{% block title %}{{ p.name }}{% endblock %}{% block body %}
+<h1>{{ p.name }}</h1><p class="muted small">CIN {{ p.cin }} · {{ p.roc }} {% if p.is_ne_registered %}<span class="badge public">NE-registered</span>{% endif %}</p>
+<h2>What the filings say</h2>
+{% for a in p.attributes %}{{ claim(a) }}{% endfor %}
+<div class="banner">{% for c in p.caveats %}{{ c }} {% endfor %}</div>
+<div class="grid g2">
+<div class="card"><h3>NE spend by year</h3>{% set mx = p.by_fy|map(attribute='cr')|max %}{% for r in p.by_fy %}<div class="small">FY{{ r.fy }} · ₹{{ '%.2f'|format(r.cr) }} cr · {{ r.n }} lines</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+<div class="card"><h3>FY22–24 by state</h3>{% set mx = p.by_state|map(attribute='cr')|max if p.by_state else 1 %}{% for r in p.by_state %}<div class="small">{{ r.state.title() }} · ₹{{ '%.2f'|format(r.cr) }} cr <span class="muted">{{ r.districts }}</span></div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+<div class="card"><h3>FY22–24 by theme</h3>{% set mx = p.by_theme|map(attribute='cr')|max if p.by_theme else 1 %}{% for r in p.by_theme %}<div class="small">{{ r.label }} · ₹{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+<div class="card"><h3>Livelihood sub-areas (keyword rule)</h3>{% if p.by_subarea %}{% set mx = p.by_subarea|map(attribute='cr')|max %}{% for r in p.by_subarea %}<div class="small">{{ r.label }} · ₹{{ '%.2f'|format(r.cr) }} cr</div>{{ bar(r.cr, mx, 'amber') }}{% endfor %}{% else %}<p class="muted small">No project names matched a sub-area rule.</p>{% endif %}</div>
+</div>
+{% if signals %}<h2>Public signals mentioning this company</h2><ul>{% for s in signals %}<li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a> <span class="small muted">{{ s.published_at }} · {{ s.signal_type }} · retrieved {{ s.retrieved_at }}</span></li>{% endfor %}</ul>{% endif %}
+<h2>Project lines (latest first)</h2>
+<table><tr><th>FY</th><th>State</th><th>District</th><th>Project as filed</th><th>Sector</th><th>Sub-area rule</th><th>Route</th><th class="num">₹ cr</th><th class="num">Raw row</th></tr>
+{% for r in p.projects %}<tr><td>{{ r.fy }}</td><td>{{ r.state_code }}</td><td>{{ r.district }}</td><td>{{ r.project_name }}</td><td class="small">{{ r.sector }}</td><td class="small">{{ r.subarea_rule or '' }}</td><td class="small">{{ r.impl_mode }}</td><td class="num">{{ '%.2f'|format(r.spent_cr) }}</td><td class="num small">{{ r.source_row }}</td></tr>{% endfor %}</table>
+<p class="small">{{ ev(p.source) }}</p>
+{% endblock %}

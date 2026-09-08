@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Enter{% endblock %}{% block body %}
+<h1>Protected layer</h1><p class="lead">Pick who you are for this demo. This is a shared demo word, not real access control; real logins come after the consent review.</p>
+{% if request.query_params.get('bad') %}<div class="banner red">That word did not match.</div>{% endif %}
+<form method="post" class="card" style="max-width:420px"><div style="margin-bottom:10px"><label>Persona</label><select name="persona">{% for k,v in personas.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+<div style="margin-bottom:14px"><label>Demo word</label><input type="text" name="token" placeholder="ffrh-demo"></div><button>Enter</button></form>
+{% endblock %}

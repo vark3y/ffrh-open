@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<h1>Which funders are already putting CSR money into the North East, on what, and where?</h1>
+<p class="lead">An open data and query layer over public filings, plus three working surfaces for the FFRH team, the advisory group and the CSOs. Prototype for the Guwahati convening. Nothing here is asserted without a source and a retrieval date.</p>
+<div class="grid g4" style="margin-top:22px">
+ <div class="card kpi"><div class="n">{{ counts.funders }}</div><div class="l">companies that filed CSR spend in the 8 NE states (FY15–FY24)</div></div>
+ <div class="card kpi"><div class="n">{{ counts.csr_projects }}</div><div class="l">project lines, each with state, district, sector, amount</div></div>
+ <div class="card kpi"><div class="n">{{ counts.ngos }}</div><div class="l">NE-registered NGOs in the public register (emails dropped)</div></div>
+ <div class="card kpi"><div class="n">{{ counts.rfps }} / {{ counts.narrative_items }}</div><div class="l">curated open calls / public news signals</div></div>
+</div>
+<h2>The North East share of filed CSR spend</h2>
+<table><tr><th>Year</th><th class="num">National (₹ cr)</th><th class="num">North East (₹ cr)</th><th class="num">NE share</th></tr>
+{% for r in national %}<tr><td>FY{{ r.fy }}</td><td class="num">{{ '{:,.0f}'.format(r.national_cr) }}</td><td class="num">{{ '{:,.1f}'.format(r.ne_cr) }}</td><td class="num">{{ r.ne_share_pct }}%</td></tr>{% endfor %}</table>
+<p class="small muted">Source: National CSR Portal project ledger (Ministry of Corporate Affairs), retrieved 2026-05-07. The concept note cites 3–4%; this ledger shows about 2% for the last three filed years. Both can be true: the ledger is project-level and excludes unallocated and fund transfers.</p>
+<h2>Start</h2>
+<div class="grid g3">
+ <div class="card"><h3>Open: explore funders</h3><p>Search 1,176 filers, see what each reported in the NE by year, state, theme and sub-area, with row-level provenance.</p><a class="btn secondary" href="/funders">Funders</a></div>
+ <div class="card"><h3>Open: patterns</h3><p>Which livelihood sub-areas actually get funded, by state and year; funders whose theme mix moved.</p><a class="btn secondary" href="/patterns">Patterns</a></div>
+ <div class="card"><h3>Protected: persona surfaces</h3><p>FFRH team board, advisory view, and the guided CSO flow ending in a cited first draft.</p><a class="btn" href="/hub/enter">Enter</a></div>
+</div>
+<div class="banner"><b>Stand-in cohort.</b> The FFRH cohort profiles have not been shared yet. The 12 organisations in the protected layer were picked by rule from the public register and are flagged as stand-ins on every page. Replace them once consent is reviewed (see <a href="/dpdp">Data protection</a>).</div>
+{% endblock %}

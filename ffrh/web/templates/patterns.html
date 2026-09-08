@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% from "_macros.html" import ev, bar %}{% block title %}Patterns{% endblock %}{% block body %}
+<h1>Patterns: what gets funded in the North East</h1>
+<form class="inline" method="get"><div><label>State</label><select name="state"><option value="">all eight</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div><button>Apply</button></form>
+<h2>Livelihood sub-areas, FY2021-22 to FY2023-24</h2>
+<p class="small muted">{{ data.method }}</p>
+{% set mx = data.subareas|map(attribute='recent_cr')|max if data.subareas else 1 %}
+{% for d in data.subareas %}<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:12px"><b>{{ d.label }}</b><span>₹{{ d.recent_cr }} cr · {{ d.recent_funders }} funders · {{ d.recent_n }} lines {{ ev(d.evidence) }}</span></div>{{ bar(d.recent_cr, mx, 'amber') }}
+<div class="small" style="margin-top:6px">Top filers: {% for t in d.top_funders %}<a href="/funders/{{ t.cin }}">{{ t.name.title() }}</a> (₹{{ t.cr }} cr){% if not loop.last %}, {% endif %}{% endfor %}</div>
+<div class="small muted">Examples as filed: {% for e in d.examples[:3] %}“{{ e.project_name }}” ({{ e.state_code }}, FY{{ e.fy }}, rule {{ e.subarea_rule }}){% if not loop.last %}; {% endif %}{% endfor %}</div></div>{% endfor %}
+<p class="small muted">Unclassified livelihood-family lines: ₹{{ data.unclassified.cr }} cr across {{ data.unclassified.n }} lines. {{ data.unclassified.note }}</p>
+<h2>Landscape by state and theme</h2>
+<div class="grid g2">
+<div class="card"><h3>NE spend by state, FY2023-24</h3>{% set rows = landscape.by_state_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows|sort(attribute='cr', reverse=True) %}<div class="small">{{ states[r.state_code] }} · ₹{{ r.cr }} cr · {{ r.funders }} funders</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+<div class="card"><h3>NE spend by theme, FY2023-24</h3>{% set rows = landscape.by_theme_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows %}<div class="small">{{ theme_labels[r.theme] }} · ₹{{ r.cr }} cr · {{ r.funders }} funders</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+</div>
+<p class="small">{{ ev(landscape.source) }}</p>
+{% endblock %}

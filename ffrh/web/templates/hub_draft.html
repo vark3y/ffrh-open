@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "_macros.html" import ev %}{% block title %}Draft #{{ d.draft_id }}{% endblock %}{% block body %}
+<h1>First-pass draft for {{ cso_name }} {% if is_stand_in %}<span class="badge standin">stand-in</span>{% endif %}</h1>
+<p class="small muted"><span class="badge mode">{{ d.mode }}</span> {% if d.model %}{{ d.model }} · {% endif %}{{ d.created_at }} · <a href="/hub/cso/{{ d.cso_id }}?step=5">back</a></p>
+{% if d.model_error %}<div class="banner">The model path was not available ({{ d.model_error }}); this is the evidence-only template. Sign in once with <code>ant auth login</code> or set <code>ANTHROPIC_API_KEY</code> to enable model drafts.</div>{% endif %}
+{% if d.withheld_fields %}<div class="banner red"><b>Withheld from the draft</b> (consent not reviewed): {{ d.withheld_fields|join(', ') }}.</div>{% endif %}
+<div class="grid" style="grid-template-columns:2fr 1fr">
+<div class="card draft">
+{% for s in d.sections %}<h2>{{ s.title }}</h2>{% for p in s.paragraphs %}{% if p.kind == 'evidence' %}<p>{{ p.text }} {% for f in p.fact_ids %}<sup><a href="#{{ f }}">{{ f }}</a></sup>{% endfor %}</p>{% else %}<p class="fill"><b>You write this:</b> {{ p.text }}</p>{% endif %}{% endfor %}{% endfor %}
+{% if d.notes_to_cso %}<h3>Notes</h3><ul class="small">{% for n in d.notes_to_cso %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
+</div>
+<div><div class="card"><h3>Evidence pack</h3>{% for f in d.facts %}<div class="fact" id="{{ f.id }}"><b>{{ f.id }}</b> <span class="badge {% if f.kind=='cso' %}public{% elif f.kind=='rfp' %}mode{% else %}standin{% endif %}">{{ f.kind }}</span> {{ f.text }} {{ ev({'source_id': f.source_id, 'source_name': f.source_name, 'publisher': '', 'url': f.url, 'retrieved_at': f.retrieved_at, 'locator': f.locator, 'value': '', 'source_rows': []}) }}</div>{% endfor %}</div>
+{% if d.dropped %}<div class="card" style="margin-top:12px;border-color:#e2b3a9"><h3>Dropped (no valid source)</h3>{% for x in d.dropped %}<div class="fact"><span class="badge withheld">{{ x.section }}</span> {{ x.text }} <span class="small muted">— {{ x.why }}</span></div>{% endfor %}</div>{% endif %}</div>
+</div>
+{% endblock %}

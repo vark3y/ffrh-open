@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}FFRH funder intelligence{% endblock %}</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><div class="wrap">
+<nav class="side">
+ <a class="brand" href="/">FFRH intelligence</a><div class="tag">North East India · open prototype</div>
+ {% if persona %}<div><span class="persona">{{ personas[persona] }}</span> <a class="small" href="/hub/leave">leave</a></div>{% endif %}
+ <h4>Open layer</h4>
+ <a class="item" href="/funders">Funders</a><a class="item" href="/patterns">Patterns &amp; landscape</a><a class="item" href="/sources">Sources</a><a class="item" href="/docs" target="_blank">API docs</a><a class="item" href="/dpdp">Data protection</a>
+ <h4>Protected layer</h4>
+ {% if persona == 'team' or not persona %}<a class="item" href="/hub/team">FFRH team board</a>{% endif %}
+ {% if persona == 'advisory' or not persona %}<a class="item" href="/hub/advisory">Advisory view</a>{% endif %}
+ {% if persona == 'cso' or not persona %}<a class="item" href="/hub/cso">CSO guided flow</a>{% endif %}
+ {% if not persona %}<a class="item" href="/hub/enter">Enter as a persona →</a>{% endif %}
+</nav>
+<main>{% block body %}{% endblock %}
+<footer class="fresh"><b>Data freshness</b> — {% for f in freshness[:6] %}{{ f.name.split(' - ')[0].split(' (')[0] }}: {{ f.retrieved_at }}{% if not loop.last %} · {% endif %}{% endfor %}. Every number on this site links to its source and retrieval date; if it does not, it is a bug.</footer>
+</main></div></body></html>

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% from "_macros.html" import ev, claim %}{% block title %}FFRH team board{% endblock %}{% block body %}
+<h1>FFRH team board: who matches whom, right now</h1>
+<div class="banner"><b>Stand-in cohort.</b> These 12 organisations were picked by rule from the public register because the FFRH profiles have not been shared. Only public-register fields are shown; every consent-required field is withheld.</div>
+<p class="small muted">Scores rank the plausibility of a conversation, not the odds of a grant. Weights and evidence are on each CSO page.</p>
+<table><tr><th>CSO</th><th>State</th><th>Themes</th><th>Top funders (score)</th><th>Open calls that fit</th><th></th></tr>
+{% for b in board %}<tr><td><b>{{ b.cso.display_name }}</b> <span class="badge standin">stand-in</span></td><td>{{ states[b.cso.state_code] }}</td><td class="small">{% for t in b.cso.themes %}{{ theme_labels[t] }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td class="small">{% for m in b.top %}<a href="/funders/{{ m.cin }}">{{ m.name.title() }}</a> ({{ m.score }}){% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+<td class="small">{% for r in b.rfps %}<a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title[:60] }}</a>{% if r.deadline %} · due {{ r.deadline }}{% endif %}{% if not loop.last %}<br>{% endif %}{% else %}<span class="muted">none above threshold</span>{% endfor %}</td>
+<td><a class="btn secondary" href="/hub/cso/{{ b.cso.cso_id }}?step=3">Open</a></td></tr>{% endfor %}</table>
+<h2>Add an open call (one public link)</h2>
+<form method="post" action="/hub/rfp" class="inline card"><div><label>URL</label><input type="url" name="url" required style="min-width:280px"></div><div><label>Title</label><input type="text" name="title" required></div><div><label>Issuer</label><input type="text" name="issuer"></div><div><label>Deadline (YYYY-MM-DD)</label><input type="text" name="deadline"></div><div><label>States (AS,ML,…)</label><input type="text" name="states"></div><div><label>Themes</label><input type="text" name="themes" value="livelihoods"></div><button>Fetch &amp; add</button></form>
+<p class="small muted">The public text of the page is fetched and stored with today's date. No bulk scraping of listing sites.</p>
+{% endblock %}

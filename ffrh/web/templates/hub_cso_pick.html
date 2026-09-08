@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block title %}CSO{% endblock %}{% block body %}
+<h1>Which organisation are you?</h1>
+<div class="banner"><b>Stand-in cohort.</b> Real cohort members will see their own profile only, after the consent review.</div>
+<div class="grid g3">{% for c in cohort %}<div class="card"><b>{{ c.display_name }}</b> <span class="badge standin">stand-in</span><div class="small muted">{{ states[c.state_code] }}{% if c.districts %} · {{ c.districts|join(', ') }}{% endif %}</div><div style="margin-top:8px"><a class="btn secondary" href="/hub/cso/{{ c.cso_id }}">Start</a></div></div>{% endfor %}</div>
+{% endblock %}

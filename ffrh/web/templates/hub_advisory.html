@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% from "_macros.html" import ev, bar %}{% block title %}Advisory view{% endblock %}{% block body %}
+<h1>Advisory view: the funder landscape and what is moving</h1>
+<div class="grid g3">
+{% set n = landscape.national[-1] %}<div class="card kpi"><div class="n">{{ n.ne_share_pct }}%</div><div class="l">NE share of filed CSR spend, FY{{ n.fy }} (₹{{ '{:,.0f}'.format(n.ne_cr) }} cr of ₹{{ '{:,.0f}'.format(n.national_cr) }} cr) {{ ev(landscape.source) }}</div></div>
+<div class="card kpi"><div class="n">{{ landscape.top_funders|length }}+</div><div class="l">funders with ≥₹1 cr filed NE spend FY22–24: {% for f in landscape.top_funders[:5] %}<a href="/funders/{{ f.cin }}">{{ f.name.title() }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div></div>
+<div class="card kpi"><div class="n">{{ feed.counts.funding }} / {{ feed.counts.narrative }}</div><div class="l">funding signals / broader narrative items in the public feed. {{ feed.weighting }}</div></div>
+</div>
+<h2>Where the money went, FY2023-24</h2>
+<div class="grid g2">
+<div class="card"><h3>By state</h3>{% set rows = landscape.by_state_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows|sort(attribute='cr', reverse=True) %}<div class="small">{{ states[r.state_code] }} · ₹{{ r.cr }} cr · {{ r.funders }} funders</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+<div class="card"><h3>By theme</h3>{% set rows = landscape.by_theme_fy|selectattr('fy','equalto','2023-24')|list %}{% set mx = rows|map(attribute='cr')|max %}{% for r in rows[:9] %}<div class="small">{{ theme_labels[r.theme] }} · ₹{{ r.cr }} cr</div>{{ bar(r.cr, mx) }}{% endfor %}</div>
+</div>
+<h2>Funders whose NE theme mix moved (FY2021-22 → FY2023-24)</h2>
+<p class="small muted">Computed from what each company filed, not from anything a person said. A shift of 25 points or more in a theme's share of the company's NE spend.</p>
+<table><tr><th>Funder</th><th class="num">NE ₹ cr FY24</th><th>Shift</th></tr>{% for s in shifts %}<tr><td><a href="/funders/{{ s.cin }}">{{ s.name.title() }}</a></td><td class="num">{{ s.ne_cr_2023_24 }}</td><td class="small">{% for x in s.shifts[:3] %}{{ theme_labels[x.theme] }}: {{ (x.share_2021_22*100)|round|int }}% → {{ (x.share_2023_24*100)|round|int }}%{% if not loop.last %}; {% endif %}{% endfor %} {{ ev(landscape.source) }}</td></tr>{% endfor %}</table>
+<h2>Cohort at a glance</h2>
+<p class="small">{% for c in cohort %}<span class="badge standin">{{ c.display_name }} · {{ c.state_code }}</span> {% endfor %}</p>
+<p class="small muted">Advisory members see the cohort list and the funder side only; consent-required CSO fields (funders, financials, scores) are not shown to this persona by design.</p>
+<h2>Public signals <span class="small muted">(80% funding · 20% narrative)</span></h2>
+<form class="inline" method="get"><div><label>State</label><select name="state"><option value="">all</option>{% for k,v in states.items() %}<option value="{{ k }}" {% if state==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div><button class="secondary">Filter</button></form>
+<div class="grid g2" style="margin-top:12px">
+<div class="card"><h3>Funding signals</h3>{% for i in feed.funding %}<div class="small" style="margin-bottom:8px"><a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a><div class="muted">{{ i.source_name.split(' (')[0] }} · {{ i.published_at }} · retrieved {{ i.retrieved_at }}{% if i.funders %} · mentions {{ i.funders|join(', ')|title }}{% endif %}{% if i.entry_kind=='manual' %} · logged by hand{% endif %}</div></div>{% else %}<p class="muted small">No funding signals stored yet. Refresh the feeds or log one below.</p>{% endfor %}</div>
+<div class="card"><h3>Broader narrative</h3>{% for i in feed.narrative %}<div class="small" style="margin-bottom:8px"><a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a><div class="muted">{{ i.source_name.split(' (')[0] }} · {{ i.published_at }} · retrieved {{ i.retrieved_at }}</div></div>{% endfor %}</div>
+</div>
+<p class="small muted">{{ feed.method }}</p>
+<h3>Log a signal you saw (a post, a talk, an article)</h3>
+<form method="post" action="/hub/signal" class="inline card"><div><label>Public URL</label><input type="url" name="url" required style="min-width:260px"></div><div><label>Title</label><input type="text" name="title" required></div><div><label>One-line note</label><input type="text" name="note"></div><div><label>States (AS,ML,…)</label><input type="text" name="states"></div><div><label>Funder CIN (optional)</label><input type="text" name="funder_cin"></div><button>Log</button></form>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% macro ev(e) -%}
+<details class="ev"><summary>{{ e.source_name.split(' - ')[0].split(' (')[0] }} · retrieved {{ e.retrieved_at }}</summary>
+<div class="body"><div><b>Source:</b> {{ e.source_name }} — {{ e.publisher }}</div>
+{% if e.url and e.url != 'n/a' %}<div><b>URL:</b> <a href="{{ e.url }}" target="_blank" rel="noopener">{{ e.url[:70] }}{% if e.url|length > 70 %}…{% endif %}</a></div>{% endif %}
+<div><b>Retrieved:</b> {{ e.retrieved_at }}</div>
+{% if e.locator %}<div><b>Where:</b> <code>{{ e.locator }}</code></div>{% endif %}
+{% if e.value %}<div><b>Value:</b> {{ e.value }}</div>{% endif %}
+{% if e.source_rows %}<div><b>Raw rows:</b> {{ e.source_rows|join(', ') }}</div>{% endif %}
+</div></details>
+{%- endmacro %}
+{% macro claim(c) -%}
+<div class="claim">{{ c.text }} {% for e in c.evidence %}{{ ev(e) }}{% endfor %}</div>
+{%- endmacro %}
+{% macro bar(v, max, cls='') -%}
+<div class="bar {{ cls }}"><i style="width:{{ (100.0 * v / max) if max else 0 }}%"></i></div>
+{%- endmacro %}
