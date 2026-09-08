@@ -26,6 +26,7 @@ app.mount("/static", StaticFiles(directory=WEB / "static"), name="static")
 templates = Jinja2Templates(directory=WEB / "templates")
 STATE_NAMES = matching.STATE_NAMES
 PERSONAS = {"team": "FFRH team", "advisory": "Advisory group", "cso": "CSO"}
+PERSONA_HOME = {"team": "/hub/team", "advisory": "/hub/advisory", "cso": "/hub/cso"}
 
 
 def db():
@@ -181,6 +182,20 @@ def require_persona(request: Request):
     return p
 
 
+def surface(needed: str):
+    """Guard a persona's landing surface so the badge always matches the screen.
+
+    Landing on another persona's surface (by typing the URL or clicking the sidebar) switches you to
+    that persona rather than showing their screen under your name. Deeper pages — a CSO's flow, a
+    draft — stay open to any signed-in persona, because the team board deliberately links into them.
+    """
+    def dep(request: Request, persona=Depends(require_persona)):
+        if persona != needed:
+            raise HTTPException(303, headers={"Location": f"/hub/as/{needed}"})
+        return persona
+    return dep
+
+
 @app.get("/hub/enter", response_class=HTMLResponse)
 def hub_enter(request: Request, con=Depends(db)):
     return render(request, "hub_enter.html", con)
@@ -190,10 +205,24 @@ def hub_enter(request: Request, con=Depends(db)):
 def hub_enter_post(persona: str = Form(...), token: str = Form(...)):
     if token != HUB_TOKEN or persona not in PERSONAS:
         return RedirectResponse("/hub/enter?bad=1", status_code=303)
-    dest = {"team": "/hub/team", "advisory": "/hub/advisory", "cso": "/hub/cso"}[persona]
-    resp = RedirectResponse(dest, status_code=303)
+    resp = RedirectResponse(PERSONA_HOME[persona], status_code=303)
     resp.set_cookie("ffrh_persona", persona, httponly=True, samesite="lax")
     resp.set_cookie("ffrh_token", token, httponly=True, samesite="lax")
+    return resp
+
+
+@app.get("/hub/as/{persona}")
+def hub_switch(request: Request, persona: str):
+    """Switch which persona you are viewing as, in one click.
+
+    All three surfaces stay reachable during a demo. Switching rewrites the persona cookie so the
+    badge and the access log say who was actually looking, rather than letting one persona browse
+    another's screen under the wrong name.
+    """
+    if request.cookies.get("ffrh_token") != HUB_TOKEN or persona not in PERSONAS:
+        return RedirectResponse("/hub/enter", status_code=303)
+    resp = RedirectResponse(PERSONA_HOME[persona], status_code=303)
+    resp.set_cookie("ffrh_persona", persona, httponly=True, samesite="lax")
     return resp
 
 
@@ -206,7 +235,7 @@ def hub_leave():
 
 @app.get("/hub", response_class=HTMLResponse)
 def hub_home(request: Request, persona=Depends(require_persona)):
-    return RedirectResponse({"team": "/hub/team", "advisory": "/hub/advisory", "cso": "/hub/cso"}[persona], status_code=303)
+    return RedirectResponse(PERSONA_HOME[persona], status_code=303)
 
 
 def _cohort(con):
@@ -219,7 +248,7 @@ def _cohort(con):
 
 
 @app.get("/hub/team", response_class=HTMLResponse)
-def hub_team(request: Request, persona=Depends(require_persona), con=Depends(db)):
+def hub_team(request: Request, persona=Depends(surface("team")), con=Depends(db)):
     _log(con, request)
     cohort = _cohort(con)
     board = []
@@ -231,7 +260,7 @@ def hub_team(request: Request, persona=Depends(require_persona), con=Depends(db)
 
 
 @app.get("/hub/advisory", response_class=HTMLResponse)
-def hub_advisory(request: Request, state: str | None = None, persona=Depends(require_persona), con=Depends(db)):
+def hub_advisory(request: Request, state: str | None = None, persona=Depends(surface("advisory")), con=Depends(db)):
     _log(con, request)
     return render(request, "hub_advisory.html", con, landscape=fq.landscape(con), shifts=narrative.funder_priority_shifts(con),
                   feed=narrative.feed(con, limit=40, state_code=state or None), state=state or "",
@@ -239,7 +268,7 @@ def hub_advisory(request: Request, state: str | None = None, persona=Depends(req
 
 
 @app.get("/hub/cso", response_class=HTMLResponse)
-def hub_cso_pick(request: Request, persona=Depends(require_persona), con=Depends(db)):
+def hub_cso_pick(request: Request, persona=Depends(surface("cso")), con=Depends(db)):
     return render(request, "hub_cso_pick.html", con, cohort=_cohort(con))
 
 

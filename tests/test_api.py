@@ -27,6 +27,11 @@ def test_hub_is_gated_then_works():
     assert c.get("/hub/team").status_code == 200
     c.post("/hub/enter", data={"persona": "advisory", "token": HUB_TOKEN})
     assert c.get("/hub/advisory").status_code == 200
+    # all three surfaces stay reachable; switching rewrites the persona badge
+    r = c.get("/hub/as/advisory", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/hub/advisory"
+    assert c.cookies.get("ffrh_persona") == "advisory"
+    assert c.get("/hub/as/nonsense", follow_redirects=False).headers["location"] == "/hub/enter"
     c.post("/hub/enter", data={"persona": "cso", "token": HUB_TOKEN})
     for s in range(1, 6):
         assert c.get(f"/hub/cso/standin-03?step={s}").status_code == 200, s

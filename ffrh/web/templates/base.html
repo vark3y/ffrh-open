@@ -6,10 +6,13 @@
  {% if persona %}<div class="persona-row"><span class="persona">{{ personas[persona] }}</span> <a class="small" href="/hub/leave">leave</a></div>{% endif %}
  <h4>Open layer</h4>
  <a class="item" href="/funders">Funders</a><a class="item" href="/patterns">Patterns &amp; landscape</a><a class="item" href="/sources">Sources</a><a class="item" href="/docs" target="_blank">API docs</a><a class="item" href="/dpdp">Data protection</a>
- <h4>Protected layer</h4>
- {% if persona == 'team' or not persona %}<a class="item" href="/hub/team">FFRH team board</a>{% endif %}
- {% if persona == 'advisory' or not persona %}<a class="item" href="/hub/advisory">Advisory view</a>{% endif %}
- {% if persona == 'cso' or not persona %}<a class="item" href="/hub/cso">CSO guided flow</a>{% endif %}
+ <h4>Protected layer{% if persona %} · viewing as{% endif %}</h4>
+ {% set path = request.url.path %}
+ {% set here = 'team' if path.startswith('/hub/team') else ('advisory' if path.startswith('/hub/advisory') else ('cso' if path.startswith('/hub/cso') else none)) %}
+ {% for p, home in [('team','/hub/team'), ('advisory','/hub/advisory'), ('cso','/hub/cso')] %}
+ {% set label = {'team':'FFRH team board','advisory':'Advisory view','cso':'CSO guided flow'}[p] %}
+ <a class="item{% if (here == p) or (here is none and persona == p) %} on{% endif %}" href="{% if persona %}/hub/as/{{ p }}{% else %}{{ home }}{% endif %}">{{ label }}</a>
+ {% endfor %}
  {% if not persona %}<a class="item" href="/hub/enter">Enter as a persona →</a>{% endif %}
 </nav>
 <script>
